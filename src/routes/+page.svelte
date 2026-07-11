@@ -272,10 +272,22 @@
 	}
 
 	.back {
-		border: none;
-		background: transparent;
-		padding: 0.35rem 0.4rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2rem;
+		padding: 0.4rem 0.75rem;
+		border: 1px solid var(--border);
+		background: var(--surface);
 		color: var(--primary);
+		border-radius: 8px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		box-shadow: var(--shadow);
+		flex-shrink: 0;
+	}
+
+	.back:hover {
+		background: #f0f2f5;
 	}
 
 	.groups {
