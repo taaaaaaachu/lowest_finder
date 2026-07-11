@@ -173,7 +173,7 @@
 		{@const g = app.selectedGroup}
 	<div class="group-detail">
 		<div class="detail-head">
-			<button type="button" class="back" onclick={backToList}>← 一覧</button>
+			<button type="button" class="back" onclick={backToList}>‹ グループ一覧</button>
 			<h1>{g.title}</h1>
 			<button type="button" class="danger" onclick={handleDeleteGroup}>グループ削除</button>
 		</div>
