@@ -1,8 +1,9 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { enhance } from '$app/forms';
 
-	let { children } = $props();
+	let { children, data } = $props();
 </script>
 
 <svelte:head>
@@ -17,7 +18,19 @@
 				<span class="logo">¥</span>
 				<span class="name">Lowest Finder</span>
 			</a>
-			<span class="mode">ゲスト</span>
+			{#if data.user}
+				<div class="account">
+					<span class="mode member">@{data.user.username}</span>
+					<form method="POST" action="/logout" use:enhance>
+						<button type="submit" class="logout">ログアウト</button>
+					</form>
+				</div>
+			{:else}
+				<div class="account">
+					<span class="mode">ゲスト</span>
+					<a class="login-link" href="/login">ログイン</a>
+				</div>
+			{/if}
 		</div>
 	</header>
 
@@ -68,12 +81,34 @@
 		font-weight: 800;
 	}
 
+	.account {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
 	.mode {
 		font-size: 0.8rem;
 		color: var(--muted);
 		border: 1px solid var(--border);
 		border-radius: 999px;
 		padding: 0.15rem 0.6rem;
+	}
+
+	.mode.member {
+		color: var(--primary);
+		border-color: var(--primary);
+		font-weight: 600;
+	}
+
+	.login-link {
+		font-size: 0.85rem;
+		text-decoration: none;
+	}
+
+	.logout {
+		font-size: 0.8rem;
+		padding: 0.25rem 0.6rem;
 	}
 
 	.content {
