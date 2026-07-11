@@ -278,7 +278,7 @@
 		padding: 0.4rem 0.75rem;
 		border: 1px solid var(--border);
 		background: var(--surface);
-		color: var(--primary);
+		color: var(--text);
 		border-radius: 8px;
 		font-size: 0.9rem;
 		font-weight: 600;
