@@ -1,0 +1,32 @@
+# Synology NAS 上で動かす想定の構成。
+# app(SvelteKit/adapter-node)を cloudflared 経由で外部公開する。
+services:
+  app:
+    build: .
+    image: lowest-finder:latest
+    restart: unless-stopped
+    environment:
+      # adapter-node がリバースプロキシ配下で form action / CSRF 検証に使う公開オリジン。
+      # 自分のサブドメインに合わせて変更する。
+      - ORIGIN=${ORIGIN:-https://lowest.example.com}
+      - DATABASE_PATH=/data/app.sqlite
+      - PORT=3000
+    volumes:
+      - db-data:/data
+    # 既定では外部ポートを公開せず、cloudflared 経由でのみ到達させる。
+    expose:
+      - "3000"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    # Cloudflare Zero Trust ダッシュボードで発行した Tunnel トークンを .env に置く。
+    # Public Hostname のサービスは http://app:3000 に向ける。
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - app
+
+volumes:
+  db-data:
