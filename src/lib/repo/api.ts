@@ -1,6 +1,20 @@
 import type { Group, Item } from '$lib/types';
 import type { GroupInput, ItemInput, Repository, Snapshot } from './types';
 
+export interface ScrapeResponse {
+	price: number | null;
+	name: string | null;
+	adapter: string;
+}
+
+/** URL から価格を取得する(会員限定)。price が null なら価格を特定できなかった。 */
+export function scrapeUrl(url: string): Promise<ScrapeResponse> {
+	return req<ScrapeResponse>('/api/scrape', {
+		method: 'POST',
+		body: JSON.stringify({ url })
+	});
+}
+
 async function req<T>(input: string, init?: RequestInit): Promise<T> {
 	const res = await fetch(input, {
 		...init,

@@ -4,6 +4,7 @@
 	import { app } from '$lib/stores/app.svelte';
 	import { IndexedDbRepository } from '$lib/repo/indexeddb';
 	import { CachingApiRepository } from '$lib/repo/cachingApi';
+	import { scrapeUrl } from '$lib/repo/api';
 	import type { Item } from '$lib/types';
 	import type { ItemInput, Snapshot } from '$lib/repo/types';
 	import ItemForm from '$lib/components/ItemForm.svelte';
@@ -99,6 +100,28 @@
 		await app.deleteItem(item.id);
 	}
 
+	// 価格取得中のアイテムID
+	let scrapingId = $state<string | null>(null);
+
+	async function handleScrape(item: Item) {
+		if (!item.url) return;
+		scrapingId = item.id;
+		app.error = null;
+		try {
+			const res = await scrapeUrl(item.url);
+			if (res.price === null) {
+				app.error =
+					'このページから価格を取得できませんでした。手入力で価格を更新してください。';
+				return;
+			}
+			await app.updateItem(item.id, { price: res.price, lastFetchedAt: Date.now() });
+		} catch (e) {
+			app.error = e instanceof Error ? e.message : '価格の取得に失敗しました。';
+		} finally {
+			scrapingId = null;
+		}
+	}
+
 	async function handleDeleteGroup() {
 		const g = app.selectedGroup;
 		if (!g) return;
@@ -163,6 +186,8 @@
 			unitLabel={g.unitLabel}
 			onedit={(item) => (editingItem = item)}
 			ondelete={handleDeleteItem}
+			onscrape={user && !app.offline ? handleScrape : undefined}
+			{scrapingId}
 		/>
 
 		<section class="form-card card">

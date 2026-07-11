@@ -9,9 +9,13 @@
 		unitLabel: string;
 		onedit: (item: Item) => void;
 		ondelete: (item: Item) => void;
+		/** URL から価格取得(会員モードのみ渡す)。未指定なら取得ボタンを出さない。 */
+		onscrape?: (item: Item) => void;
+		/** 価格取得中のアイテムID。 */
+		scrapingId?: string | null;
 	}
 
-	let { items, unitLabel, onedit, ondelete }: Props = $props();
+	let { items, unitLabel, onedit, ondelete, onscrape, scrapingId = null }: Props = $props();
 
 	// 最安(単価が算出できる先頭)を強調するため、最小単価を求める。
 	const cheapestId = $derived.by(() => {
@@ -56,6 +60,16 @@
 					{/if}
 				</div>
 				<div class="ops">
+					{#if onscrape && item.url}
+						<button
+							type="button"
+							class="scrape"
+							onclick={() => onscrape(item)}
+							disabled={scrapingId === item.id}
+						>
+							{scrapingId === item.id ? '取得中…' : '価格取得'}
+						</button>
+					{/if}
 					<button type="button" onclick={() => onedit(item)} aria-label="編集">編集</button>
 					<button type="button" class="danger" onclick={() => ondelete(item)} aria-label="削除">
 						削除
@@ -155,5 +169,11 @@
 		flex-direction: column;
 		gap: 0.25rem;
 		flex-shrink: 0;
+	}
+
+	.scrape {
+		color: var(--primary);
+		border-color: var(--primary);
+		font-size: 0.85rem;
 	}
 </style>
