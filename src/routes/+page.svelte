@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { app } from '$lib/stores/app.svelte';
 	import { IndexedDbRepository } from '$lib/repo/indexeddb';
+	import { CachingApiRepository } from '$lib/repo/cachingApi';
 	import type { Item } from '$lib/types';
-	import type { ItemInput } from '$lib/repo/types';
+	import type { ItemInput, Snapshot } from '$lib/repo/types';
 	import ItemForm from '$lib/components/ItemForm.svelte';
 	import ItemTable from '$lib/components/ItemTable.svelte';
 
@@ -16,11 +18,57 @@
 	// 商品編集中の対象(null なら追加モード)
 	let editingItem = $state<Item | null>(null);
 
+	// 取り込み待ちのゲストデータ(会員ログイン直後にゲストデータがあれば提示)
+	let pendingImport = $state<{ snapshot: Snapshot; groups: number; items: number } | null>(null);
+	let importing = $state(false);
+
+	const user = $derived(page.data.user);
+
 	onMount(async () => {
-		// IndexedDB はブラウザ専用のため、マウント後に初期化する。
-		await app.setRepository(new IndexedDbRepository());
+		if (user) {
+			// 会員モード: サーバーAPI + オフライン閲覧キャッシュ。
+			await app.setRepository(new CachingApiRepository((offline) => (app.offline = offline)));
+			await maybeOfferImport();
+		} else {
+			// ゲストモード: IndexedDB のみ(完全クライアント完結)。
+			await app.setRepository(new IndexedDbRepository());
+		}
 		ready = true;
 	});
+
+	// ゲスト用 IndexedDB にデータが残っていれば、会員データへの取り込みを提示する。
+	async function maybeOfferImport() {
+		const guest = new IndexedDbRepository();
+		const snapshot = await guest.exportAll();
+		if (snapshot.groups.length > 0 || snapshot.items.length > 0) {
+			pendingImport = {
+				snapshot,
+				groups: snapshot.groups.length,
+				items: snapshot.items.length
+			};
+		}
+	}
+
+	async function confirmImport() {
+		if (!pendingImport || !(app.repo instanceof CachingApiRepository)) return;
+		importing = true;
+		try {
+			await app.repo.importSnapshot(pendingImport.snapshot);
+			// 取り込んだゲストデータは二重表示を避けるため消す。
+			await new IndexedDbRepository().clearAll();
+			pendingImport = null;
+			await app.reloadGroups();
+		} catch (e) {
+			app.error = e instanceof Error ? e.message : '取り込みに失敗しました。';
+		} finally {
+			importing = false;
+		}
+	}
+
+	function dismissImport() {
+		// 取り込まない場合はゲストデータをそのまま残す(次回また提示)。
+		pendingImport = null;
+	}
 
 	async function createGroup(e: SubmitEvent) {
 		e.preventDefault();
@@ -67,8 +115,39 @@
 
 {#if !ready}
 	<p class="loading">読み込み中…</p>
-{:else if app.selectedGroup}
-	{@const g = app.selectedGroup}
+{:else}
+	{#if pendingImport}
+		<div class="banner import">
+			<div>
+				<strong>ゲストデータの取り込み</strong>
+				<p>
+					この端末に保存されたゲストデータ({pendingImport.groups}グループ / {pendingImport.items}商品)を、あなたのアカウントに取り込みますか?
+				</p>
+			</div>
+			<div class="banner-actions">
+				<button type="button" class="primary" onclick={confirmImport} disabled={importing}>
+					{importing ? '取り込み中…' : '取り込む'}
+				</button>
+				<button type="button" onclick={dismissImport} disabled={importing}>あとで</button>
+			</div>
+		</div>
+	{/if}
+
+	{#if app.offline}
+		<div class="banner offline">
+			オフラインです。保存済みデータの閲覧のみできます(追加・編集はオンライン時に行ってください)。
+		</div>
+	{/if}
+
+	{#if app.error}
+		<div class="banner error">
+			{app.error}
+			<button type="button" class="dismiss" onclick={() => (app.error = null)}>×</button>
+		</div>
+	{/if}
+
+	{#if app.selectedGroup}
+		{@const g = app.selectedGroup}
 	<div class="group-detail">
 		<div class="detail-head">
 			<button type="button" class="back" onclick={backToList}>← 一覧</button>
@@ -135,6 +214,7 @@
 			</form>
 		</section>
 	</div>
+	{/if}
 {/if}
 
 <style>

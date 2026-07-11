@@ -13,6 +13,8 @@ export class AppStore {
 	items = $state<Item[]>([]);
 	loading = $state(false);
 	error = $state<string | null>(null);
+	/** オフラインでキャッシュを表示している状態(会員モードのみ)。 */
+	offline = $state(false);
 
 	/** 選択中グループ。 */
 	get selectedGroup(): Group | null {
