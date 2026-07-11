@@ -27,6 +27,37 @@ npm run dev          # http://localhost:5173
 - 型チェック: `npm run check`
 - スキーマ変更後: `npm run db:generate` でマイグレーション生成 → `npm run db:migrate`
 
+## ローカルでの Docker 動作確認(NAS デプロイ前)
+
+NAS に上げる前に、手元の Docker で本番同等のコンテナを動かして確認する。
+cloudflared は使わず、ポートを直接公開する専用の compose ファイル（`docker-compose.local.yml`）を使う。
+
+```bash
+# ビルドして起動(初回は better-sqlite3 のビルドで数分かかることがある)
+docker compose -f docker-compose.local.yml up --build
+
+# ブラウザで http://localhost:3000 を開く
+```
+
+確認する流れ:
+
+1. **ゲストモード**: グループ・商品を追加し、単価順ソート・最安ハイライトを確認。
+2. **会員モード**: 「会員登録」→ 登録できるか（＝フォーム POST が通るか）を確認。
+   - ここが 403 になる場合は `ORIGIN` の設定ミス。ローカルは `http://localhost:3000` に一致していること。
+3. ゲストで作ってから登録すると **取り込みバナー** が出るか。
+4. 会員で URL 付き商品の **価格取得** ボタン（`https://example.com/` で「取得不可」フォールバック等）。
+
+運用コマンド:
+
+```bash
+docker compose -f docker-compose.local.yml logs -f app   # ログ確認
+docker compose -f docker-compose.local.yml down           # 停止
+docker compose -f docker-compose.local.yml down -v        # DB ボリュームごと破棄(データ初期化)
+```
+
+- DB は名前付きボリューム `db-data-local` に永続化される。`down`（`-v` なし）ではデータは残る。
+- ARM/x86 どちらのマシンでも、`docker build` はそのマシンのアーキテクチャ向けに better-sqlite3 を解決する。NAS 上でビルドすれば NAS 用バイナリになる。
+
 ## デプロイ(Synology NAS + Docker + Cloudflare Tunnel)
 
 外部公開は **Cloudflare Tunnel** を使う(ポート開放不要・HTTPS 自動・NAS の IP を晒さない)。
