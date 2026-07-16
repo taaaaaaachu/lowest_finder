@@ -63,6 +63,13 @@ docker compose -f docker-compose.local.yml down -v        # DB ボリューム�
 外部公開は **Cloudflare Tunnel** を使う(ポート開放不要・HTTPS 自動・NAS の IP を晒さない)。
 前提: Cloudflare 管理下のドメイン(例 `example.com`)。
 
+### 0. NAS 側の前提
+
+- DSM 7.2 以降で **Container Manager**(旧「Docker」パッケージ)をインストール済みであること。
+  Docker に対応した機種が必要(x86 系のほとんど、および Docker 対応の一部モデル)。
+- 低スペック/低メモリ機だと、NAS 上での `npm ci`＋`vite build`＋better-sqlite3 のビルドが重いことがある。
+  厳しい場合は「別 PC でイメージを作って持ち込む」下記の補足を参照。
+
 ### 1. Cloudflare Tunnel を作成
 
 1. Cloudflare **Zero Trust** ダッシュボード → **Networks > Tunnels** → **Create a tunnel** →
@@ -72,29 +79,73 @@ docker compose -f docker-compose.local.yml down -v        # DB ボリューム�
    - Subdomain: `lowest`(任意) / Domain: `example.com`
    - Service: **HTTP** → `app:3000`(compose 内のサービス名:ポート)
 
-### 2. .env を用意
+### 2. コードを NAS に置く
+
+共有フォルダ(例 `/volume1/docker/lowest-finder`)にプロジェクト一式を配置する。方法はどちらでも:
+
+- **git**: NAS に SSH して `git clone <このリポジトリ>`
+- **File Station / SMB**: 手元のフォルダをコピー(`node_modules` や `.svelte-kit` は不要)
+
+### 3. .env を用意
+
+プロジェクト直下に `.env` を作る:
 
 ```bash
 cp .env.example .env
-# ORIGIN を自分の公開 URL に、TUNNEL_TOKEN を上で控えたトークンに設定
+# ORIGIN=https://lowest.example.com  (自分の公開 URL に一致させる)
+# TUNNEL_TOKEN=（手順1で控えたトークン）
 ```
 
-`ORIGIN` は adapter-node が form action / CSRF 検証で使うため、**公開 URL と一致**させること。
+`ORIGIN` は adapter-node が form action / CSRF 検証で使うため、**公開 URL と完全一致**させること。
 
-### 3. 起動
+### 4a. 起動(SSH — 推奨・確実)
+
+DSM の **コントロールパネル → 端末と SNMP → SSH を有効化** し、NAS に SSH:
 
 ```bash
-docker compose up -d --build
+cd /volume1/docker/lowest-finder
+sudo docker compose up -d --build      # 初回はビルドで数分〜
+sudo docker compose logs -f            # 起動確認(app に Listening on ...:3000)
 ```
 
-- `app` コンテナ: 起動時にマイグレーションを適用してからサーバー起動。DB は名前付きボリューム `db-data`(`/data/app.sqlite`)に永続化。
-- `cloudflared` コンテナ: トンネルを張り、`https://lowest.example.com` → `app:3000` を公開。
+- `app`: 起動時にマイグレーション適用 → サーバー起動。DB は名前付きボリューム `db-data`(`/data/app.sqlite`)に永続化。
+- `cloudflared`: トンネルを張り `https://lowest.example.com` → `app:3000` を公開。
+- `restart: unless-stopped` なので NAS 再起動後も自動で立ち上がる。
 
-Synology では **Container Manager** でこのリポジトリの `docker-compose.yml` をプロジェクトとして読み込むか、SSH で `docker compose` を実行する。
+ブラウザで `https://lowest.example.com` を開いて確認。
+
+### 4b. 起動(Container Manager GUI)
+
+SSH を使わない場合:
+
+1. **Container Manager → プロジェクト → 作成**
+2. パスに手順2で置いたフォルダ(`docker-compose.yml` のある場所)を指定
+3. ソースは既存の `docker-compose.yml` を使用。環境変数(`ORIGIN` / `TUNNEL_TOKEN`)は `.env` を置いておけば読まれる
+4. ビルドして起動
 
 ### バックアップ
 
-DB は単一ファイル。ボリューム `db-data` 内の `app.sqlite`(+ WAL)をコピーするだけでバックアップできる。
+DB は単一ファイル。名前付きボリューム `db-data` 内の `app.sqlite`(+ WAL)をコピーするだけでよい。
+**Hyper Backup 等で扱いやすくしたい**なら、`docker-compose.yml` の `app.volumes` を共有フォルダへの
+バインドマウントに変えると、DSM のバックアップ対象に含めやすい:
+
+```yaml
+    volumes:
+      - /volume1/docker/lowest-finder/data:/data
+```
+
+### 補足: NAS が非力でビルドが厳しい場合
+
+手元の PC(NAS と同じ CPU アーキテクチャ)でイメージを作り、NAS に持ち込む:
+
+```bash
+# PC 側(NAS が arm64 なら --platform linux/arm64 を付ける)
+docker build -t lowest-finder:latest .
+docker save lowest-finder:latest | gzip > lowest-finder.tar.gz
+# NAS に転送後、NAS 側で
+gunzip -c lowest-finder.tar.gz | sudo docker load
+# docker-compose.yml の app.build 行を消し image: lowest-finder:latest だけにして起動
+```
 
 ## スクレイピングについて
 
