@@ -4,7 +4,8 @@ services:
   app:
     build: .
     image: lowest-finder:latest
-    restart: unless-stopped
+    # 自動再起動はしない(重要サービスではないため手動起動 = docker compose up -d)。
+    restart: "no"
     environment:
       # adapter-node がリバースプロキシ配下で form action / CSRF 検証に使う公開オリジン。
       # 自分のサブドメインに合わせて変更する。
@@ -19,7 +20,7 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    restart: unless-stopped
+    restart: "no"
     # Cloudflare Zero Trust ダッシュボードで発行した Tunnel トークンを .env に置く。
     # Public Hostname のサービスは http://app:3000 に向ける。
     command: tunnel --no-autoupdate run

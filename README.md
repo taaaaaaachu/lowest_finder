@@ -110,7 +110,8 @@ sudo docker compose logs -f            # 起動確認(app に Listening on ...:3
 
 - `app`: 起動時にマイグレーション適用 → サーバー起動。DB は名前付きボリューム `db-data`(`/data/app.sqlite`)に永続化。
 - `cloudflared`: トンネルを張り `https://lowest.example.com` → `app:3000` を公開。
-- `restart: unless-stopped` なので NAS 再起動後も自動で立ち上がる。
+- `restart: "no"` としているため**自動再起動はしない**(重要サービスではないので手動運用)。
+  NAS 再起動後などに使いたいときは `sudo docker compose up -d` で起動する。
 
 ブラウザで `https://lowest.example.com` を開いて確認。
 

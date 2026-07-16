@@ -7,7 +7,7 @@ services:
   app:
     build: .
     image: lowest-finder:local
-    restart: unless-stopped
+    restart: "no"
     environment:
       # ローカルは http://localhost:3000 でアクセスするので ORIGIN もそれに合わせる。
       # (本番 URL のままだとログイン等の POST が CSRF で 403 になる)
