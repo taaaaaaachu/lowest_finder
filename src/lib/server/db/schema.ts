@@ -51,7 +51,31 @@ export const items = sqliteTable(
 	(t) => [index('items_group_idx').on(t.groupId)]
 );
 
+/**
+ * 招待コード。会員登録に必要。ログイン中の会員が発行する。
+ * 単回使用: used_by がセットされたら消費済み。expires_at が null なら無期限。
+ */
+export const invites = sqliteTable(
+	'invites',
+	{
+		id: text('id').primaryKey(),
+		code: text('code').notNull().unique(),
+		/** 発行した会員。 */
+		createdBy: text('created_by')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		createdAt: integer('created_at').notNull(),
+		/** 有効期限(epoch ミリ秒)。null なら無期限。 */
+		expiresAt: integer('expires_at'),
+		/** このコードを使って登録した会員。未使用なら null。 */
+		usedBy: text('used_by').references(() => users.id, { onDelete: 'set null' }),
+		usedAt: integer('used_at')
+	},
+	(t) => [index('invites_creator_idx').on(t.createdBy)]
+);
+
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
+export type InviteRow = typeof invites.$inferSelect;
 export type GroupRow = typeof groups.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;

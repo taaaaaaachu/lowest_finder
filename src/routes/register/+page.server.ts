@@ -1,16 +1,26 @@
 import { fail, redirect } from '@sveltejs/kit';
 import {
 	createSession,
-	createUser,
+	hashPassword,
 	validatePassword,
 	validateUsername
 } from '$lib/server/auth';
 import { setSessionCookie } from '$lib/server/sessionCookie';
+import { db } from '$lib/server/db';
+import { countUsers, registerUser } from '$lib/server/invites';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	// ログイン済みならトップへ。
 	if (locals.user) throw redirect(303, '/');
+	// ユーザーが 0 人のときだけ招待コードなしで登録できる(ブートストラップ)。
+	return { requireInvite: countUsers(db) > 0 };
+};
+
+const ERROR_MESSAGES: Record<string, string> = {
+	invite_invalid: '招待コードが正しくありません。',
+	invite_expired: 'この招待コードは有効期限が切れています。',
+	invite_used: 'この招待コードは既に使われています。',
+	username_taken: 'このユーザー名は既に使われています。'
 };
 
 export const actions: Actions = {
@@ -18,21 +28,27 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const username = String(data.get('username') ?? '');
 		const password = String(data.get('password') ?? '');
+		const inviteCode = String(data.get('invite') ?? '').trim();
+
+		const requireInvite = countUsers(db) > 0;
 
 		const uErr = validateUsername(username);
 		if (uErr) return fail(400, { username, error: uErr });
 		const pErr = validatePassword(password);
 		if (pErr) return fail(400, { username, error: pErr });
-
-		const user = await createUser(username, password);
-		if (!user) {
-			return fail(409, { username, error: 'このユーザー名は既に使われています。' });
+		if (requireInvite && !inviteCode) {
+			return fail(400, { username, error: '招待コードを入力してください。' });
 		}
 
-		const { token, expiresAt } = createSession(user.id);
-		setSessionCookie(cookies, token, expiresAt);
+		const passwordHash = await hashPassword(password);
+		const result = registerUser(db, { username, passwordHash, requireInvite, inviteCode });
+		if (!result.ok) {
+			const status = result.error === 'username_taken' ? 409 : 400;
+			return fail(status, { username, error: ERROR_MESSAGES[result.error] });
+		}
 
-		// 登録直後はトップへ。ゲストデータの取り込み確認はクライアント側で行う。
+		const { token, expiresAt } = createSession(result.user.id);
+		setSessionCookie(cookies, token, expiresAt);
 		throw redirect(303, '/?welcome=1');
 	}
 };

@@ -18,8 +18,23 @@ export function createDb(dbPath: string): Db {
 	return drizzle(sqlite, { schema });
 }
 
-/** SQLite ファイルのパス。Docker では永続ボリューム上のパスを環境変数で渡す。 */
-const dbPath = env.DATABASE_PATH ?? './data/app.sqlite';
+// 本番/実行時のシングルトン。import 時ではなく初回アクセス時に開く(遅延初期化)。
+// これにより、テストが `createDb(':memory:')` を使う際に本番 DB ファイルを開かずに済む。
+let instance: Db | null = null;
+function resolveDb(): Db {
+	if (!instance) {
+		instance = createDb(env.DATABASE_PATH ?? './data/app.sqlite');
+	}
+	return instance;
+}
 
-export const db = createDb(dbPath);
+/** アプリ実行時に使う DB。初回アクセスで接続を開く。 */
+export const db = new Proxy({} as Db, {
+	get(_target, prop, receiver) {
+		const real = resolveDb() as unknown as Record<string | symbol, unknown>;
+		const value = Reflect.get(real, prop, receiver);
+		return typeof value === 'function' ? value.bind(real) : value;
+	}
+});
+
 export { schema };

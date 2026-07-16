@@ -11,10 +11,6 @@ const SESSION_RENEW_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 15; // 残り15日を�
 // argon2 パラメータ(OWASP 推奨相当)。
 const ARGON2_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
 
-function newId(): string {
-	return randomBytes(16).toString('hex');
-}
-
 /** セッショントークンからDB保存用の id(ハッシュ)を作る。平文トークンはDBに残さない。 */
 function hashToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
@@ -33,22 +29,9 @@ export function validatePassword(password: string): string | null {
 	return null;
 }
 
-/** 新規ユーザーを作成する。ユーザー名が既存なら null を返す。 */
-export async function createUser(username: string, password: string): Promise<UserRow | null> {
-	const passwordHash = await hash(password, ARGON2_OPTS);
-	const user: UserRow = {
-		id: newId(),
-		username: username.trim(),
-		passwordHash,
-		createdAt: Date.now()
-	};
-	try {
-		db.insert(users).values(user).run();
-	} catch {
-		// UNIQUE 制約違反 = ユーザー名重複。
-		return null;
-	}
-	return user;
+/** パスワードを argon2 でハッシュ化する(登録トランザクションの外で使う)。 */
+export function hashPassword(password: string): Promise<string> {
+	return hash(password, ARGON2_OPTS);
 }
 
 /** ユーザー名+パスワードを検証し、一致すればユーザーを返す。 */

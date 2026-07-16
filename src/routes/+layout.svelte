@@ -8,7 +8,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Lowest Finder — 容量単価くらべ</title>
+	<title>Lowest Finder — 容量単価比較</title>
 </svelte:head>
 
 <div class="app">

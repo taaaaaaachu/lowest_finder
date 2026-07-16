@@ -15,6 +15,25 @@ export function scrapeUrl(url: string): Promise<ScrapeResponse> {
 	});
 }
 
+export interface InviteInfo {
+	code: string;
+	createdAt: number;
+	expiresAt: number | null;
+	usedBy: string | null;
+	usedAt: number | null;
+	status: 'active' | 'used' | 'expired';
+}
+
+/** 招待コードを発行する。expiresInHours が null なら無期限。 */
+export function createInvite(expiresInHours: number | null): Promise<{ code: string; expiresAt: number | null }> {
+	return req('/api/invites', { method: 'POST', body: JSON.stringify({ expiresInHours }) });
+}
+
+/** 自分が発行した招待コード一覧。 */
+export function listInvites(): Promise<InviteInfo[]> {
+	return req<InviteInfo[]>('/api/invites');
+}
+
 async function req<T>(input: string, init?: RequestInit): Promise<T> {
 	const res = await fetch(input, {
 		...init,
