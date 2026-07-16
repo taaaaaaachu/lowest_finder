@@ -15,6 +15,13 @@
       "when": 1784186173591,
       "tag": "0001_busy_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784188316570,
+      "tag": "0002_crazy_sprite",
+      "breakpoints": true
     }
   ]
 }

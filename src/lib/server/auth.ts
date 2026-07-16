@@ -12,9 +12,10 @@ const SESSION_RENEW_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 15; // 残り15日を�
 const ARGON2_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
 
 /** セッショントークンからDB保存用の id(ハッシュ)を作る。平文トークンはDBに残さない。 */
-function hashToken(token: string): string {
+export function hashSessionToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
 }
+const hashToken = hashSessionToken;
 
 export function validateUsername(username: string): string | null {
 	const u = username.trim();
@@ -50,7 +51,7 @@ export async function verifyCredentials(
 }
 
 export interface SessionValidation {
-	user: Pick<UserRow, 'id' | 'username'>;
+	user: Pick<UserRow, 'id' | 'username' | 'role'>;
 	/** Cookie の有効期限を更新すべき場合の新しい期限(延長時のみ)。 */
 	renewedExpiresAt: number | null;
 }
@@ -75,7 +76,7 @@ export function validateSessionToken(token: string): SessionValidation | null {
 	}
 
 	const user = db
-		.select({ id: users.id, username: users.username })
+		.select({ id: users.id, username: users.username, role: users.role })
 		.from(users)
 		.where(eq(users.id, row.userId))
 		.get();

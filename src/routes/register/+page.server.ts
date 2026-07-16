@@ -41,7 +41,9 @@ export const actions: Actions = {
 		}
 
 		const passwordHash = await hashPassword(password);
-		const result = registerUser(db, { username, passwordHash, requireInvite, inviteCode });
+		// ブートストラップ(ユーザー0人)の 1 人目は super_admin。以降は user。
+		const role = requireInvite ? 'user' : 'super_admin';
+		const result = registerUser(db, { username, passwordHash, requireInvite, inviteCode, role });
 		if (!result.ok) {
 			const status = result.error === 'username_taken' ? 409 : 400;
 			return fail(status, { username, error: ERROR_MESSAGES[result.error] });

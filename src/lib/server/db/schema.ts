@@ -1,10 +1,15 @@
 import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core';
 
+import type { Role } from '$lib/rbac';
+export type { Role };
+
 /** 会員ユーザー。ログインIDはユーザー名(メールは使わない)。 */
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey(),
 	username: text('username').notNull().unique(),
 	passwordHash: text('password_hash').notNull(),
+	/** 役割。既定は user。最初に登録したユーザーは super_admin。 */
+	role: text('role').notNull().$type<Role>().default('user'),
 	createdAt: integer('created_at').notNull()
 });
 
@@ -60,22 +65,23 @@ export const invites = sqliteTable(
 	{
 		id: text('id').primaryKey(),
 		code: text('code').notNull().unique(),
-		/** 発行した会員。 */
-		createdBy: text('created_by')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
+		/** 発行した会員。発行者が削除されたら SET NULL(招待の履歴は残す)。 */
+		createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
 		createdAt: integer('created_at').notNull(),
 		/** 有効期限(epoch ミリ秒)。null なら無期限。 */
 		expiresAt: integer('expires_at'),
 		/** このコードを使って登録した会員。未使用なら null。 */
 		usedBy: text('used_by').references(() => users.id, { onDelete: 'set null' }),
-		usedAt: integer('used_at')
+		usedAt: integer('used_at'),
+		/** 無効化された日時(epoch ミリ秒)。null なら未無効化。 */
+		revokedAt: integer('revoked_at')
 	},
 	(t) => [index('invites_creator_idx').on(t.createdBy)]
 );
 
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
+// Role 型は上部で定義済み(users.role の $type に使用)。
 export type InviteRow = typeof invites.$inferSelect;
 export type GroupRow = typeof groups.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;

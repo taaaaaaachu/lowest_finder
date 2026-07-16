@@ -9,7 +9,6 @@
 	import type { ItemInput, Snapshot } from '$lib/repo/types';
 	import ItemForm from '$lib/components/ItemForm.svelte';
 	import ItemTable from '$lib/components/ItemTable.svelte';
-	import InvitePanel from '$lib/components/InvitePanel.svelte';
 
 	let ready = $state(false);
 
@@ -239,10 +238,6 @@
 				<button type="submit" class="primary" disabled={!newTitle.trim()}>追加</button>
 			</form>
 		</section>
-
-		{#if user}
-			<InvitePanel />
-		{/if}
 	</div>
 	{/if}
 {/if}

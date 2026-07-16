@@ -2,6 +2,7 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { enhance } from '$app/forms';
+	import { canAccessAdmin } from '$lib/rbac';
 
 	let { children, data } = $props();
 </script>
@@ -20,6 +21,10 @@
 			</a>
 			{#if data.user}
 				<div class="account">
+					{#if canAccessAdmin(data.user.role)}
+						<a class="nav-link" href="/admin/users">管理</a>
+					{/if}
+					<a class="nav-link" href="/account">アカウント</a>
 					<span class="mode member">@{data.user.username}</span>
 					<form method="POST" action="/logout" use:enhance>
 						<button type="submit" class="logout">ログアウト</button>
@@ -104,6 +109,16 @@
 	.login-link {
 		font-size: 0.85rem;
 		text-decoration: none;
+	}
+
+	.nav-link {
+		font-size: 0.85rem;
+		text-decoration: none;
+		color: var(--text);
+	}
+
+	.nav-link:hover {
+		color: var(--primary);
 	}
 
 	.logout {

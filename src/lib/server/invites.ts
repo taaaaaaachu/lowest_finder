@@ -1,7 +1,8 @@
-import { and, eq, desc } from 'drizzle-orm';
+import { and, eq, desc, isNull } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 import { randomBytes } from 'node:crypto';
 import type { Db } from './db';
-import { users, invites, type InviteRow, type UserRow } from './db/schema';
+import { users, invites, type InviteRow, type UserRow, type Role } from './db/schema';
 
 function newId(): string {
 	return randomBytes(16).toString('hex');
@@ -28,7 +29,8 @@ export function createInvite(db: Db, userId: string, expiresAt: number | null): 
 			createdAt: Date.now(),
 			expiresAt,
 			usedBy: null,
-			usedAt: null
+			usedAt: null,
+			revokedAt: null
 		};
 		try {
 			db.insert(invites).values(row).run();
@@ -40,32 +42,90 @@ export function createInvite(db: Db, userId: string, expiresAt: number | null): 
 	throw new Error('招待コードの生成に失敗しました。');
 }
 
-export interface InviteStatus extends InviteRow {
-	status: 'active' | 'used' | 'expired';
+export type InviteState = 'active' | 'used' | 'expired' | 'revoked';
+
+/** 招待の状態を判定する。優先順位: revoked > used > expired > active。 */
+export function inviteState(
+	inv: Pick<InviteRow, 'usedBy' | 'expiresAt' | 'revokedAt'>,
+	now = Date.now()
+): InviteState {
+	if (inv.revokedAt !== null) return 'revoked';
+	if (inv.usedBy) return 'used';
+	if (inv.expiresAt !== null && now >= inv.expiresAt) return 'expired';
+	return 'active';
 }
 
-/** 自分が発行した招待コードを新しい順に返す(状態付き)。 */
-export function listInvites(db: Db, userId: string): InviteStatus[] {
+export interface AdminInvite {
+	id: string;
+	code: string;
+	createdAt: number;
+	expiresAt: number | null;
+	usedAt: number | null;
+	revokedAt: number | null;
+	/** 発行者のユーザー名(削除済みなら null)。 */
+	issuer: string | null;
+	/** 使用者のユーザー名(未使用なら null)。 */
+	invitee: string | null;
+	state: InviteState;
+}
+
+/** 全ての招待を新しい順に返す(発行者を問わないグローバル一覧。管理者以上向け)。 */
+export function listAllInvites(db: Db): AdminInvite[] {
+	const issuer = alias(users, 'issuer');
+	const invitee = alias(users, 'invitee');
 	const now = Date.now();
 	return db
-		.select()
+		.select({
+			id: invites.id,
+			code: invites.code,
+			createdAt: invites.createdAt,
+			expiresAt: invites.expiresAt,
+			usedAt: invites.usedAt,
+			revokedAt: invites.revokedAt,
+			usedBy: invites.usedBy,
+			issuer: issuer.username,
+			invitee: invitee.username
+		})
 		.from(invites)
-		.where(eq(invites.createdBy, userId))
+		.leftJoin(issuer, eq(invites.createdBy, issuer.id))
+		.leftJoin(invitee, eq(invites.usedBy, invitee.id))
 		.orderBy(desc(invites.createdAt))
 		.all()
-		.map((inv) => ({
-			...inv,
-			status: inv.usedBy
-				? ('used' as const)
-				: inv.expiresAt !== null && now >= inv.expiresAt
-					? ('expired' as const)
-					: ('active' as const)
+		.map((r) => ({
+			id: r.id,
+			code: r.code,
+			createdAt: r.createdAt,
+			expiresAt: r.expiresAt,
+			usedAt: r.usedAt,
+			revokedAt: r.revokedAt,
+			issuer: r.issuer,
+			invitee: r.invitee,
+			state: inviteState({ usedBy: r.usedBy, expiresAt: r.expiresAt, revokedAt: r.revokedAt }, now)
 		}));
+}
+
+/** 招待を無効化する(行は残す)。未使用・未無効化のものだけ対象。成功したら true。 */
+export function revokeInvite(db: Db, id: string): boolean {
+	const res = db
+		.update(invites)
+		.set({ revokedAt: Date.now() })
+		.where(and(eq(invites.id, id), isNull(invites.usedBy), isNull(invites.revokedAt)))
+		.run();
+	return res.changes > 0;
+}
+
+/** 招待を完全に削除する。成功したら true。 */
+export function deleteInvite(db: Db, id: string): boolean {
+	const res = db.delete(invites).where(eq(invites.id, id)).run();
+	return res.changes > 0;
 }
 
 export type RegisterResult =
 	| { ok: true; user: UserRow }
-	| { ok: false; error: 'invite_invalid' | 'invite_expired' | 'invite_used' | 'username_taken' };
+	| {
+			ok: false;
+			error: 'invite_invalid' | 'invite_expired' | 'invite_used' | 'invite_revoked' | 'username_taken';
+	  };
 
 /**
  * ユーザーを作成する。requireInvite が true のときは招待コードを検証・消費する。
@@ -79,6 +139,8 @@ export function registerUser(
 		passwordHash: string;
 		requireInvite: boolean;
 		inviteCode?: string;
+		/** 付与するロール。ブートストラップ時は super_admin、通常は user。 */
+		role: Role;
 	}
 ): RegisterResult {
 	const now = Date.now();
@@ -92,6 +154,7 @@ export function registerUser(
 					.where(eq(invites.code, params.inviteCode ?? ''))
 					.get();
 				if (!invite) return { ok: false, error: 'invite_invalid' };
+				if (invite.revokedAt !== null) return { ok: false, error: 'invite_revoked' };
 				if (invite.usedBy) return { ok: false, error: 'invite_used' };
 				if (invite.expiresAt !== null && now >= invite.expiresAt) {
 					return { ok: false, error: 'invite_expired' };
@@ -102,6 +165,7 @@ export function registerUser(
 				id: newId(),
 				username: params.username.trim(),
 				passwordHash: params.passwordHash,
+				role: params.role,
 				createdAt: now
 			};
 			try {
