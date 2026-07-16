@@ -148,6 +148,32 @@ gunzip -c lowest-finder.tar.gz | sudo docker load
 # docker-compose.yml の app.build 行を消し image: lowest-finder:latest だけにして起動
 ```
 
+### 更新(再デプロイ)
+
+コードを更新して NAS に反映する。**DB は名前付きボリューム `db-data` に残るのでデータは消えない**。スキーマ変更があっても、コンテナ起動時に `docker-entrypoint.sh` がマイグレーションを自動適用する。
+
+大前提:
+
+- **`.env` は消さない・上書きしない**(実トークンが入っている)。
+- **`docker compose down -v` は使わない**(`-v` はボリュームごと DB を消す)。更新は `up -d --build` でよい。
+
+SSH の場合:
+
+```bash
+cd /volume1/docker/lowest-finder
+# コードを更新(git なら pull、File Station なら .env 以外を上書きコピー)
+sudo docker compose up -d --build   # イメージ再ビルド+コンテナ再作成(ボリュームは保持)
+sudo docker compose logs -f app     # 「マイグレーション適用完了」→「Listening on ...」を確認
+```
+
+Container Manager(GUI)の場合:
+
+1. File Station で**新しいソースを上書きコピー**(`.env` は残す。`node_modules` などは不要)。
+2. Container Manager → プロジェクトを開き、**ビルドし直して**コンテナを再作成する。
+3. `app` コンテナのログでマイグレーション適用と起動を確認。
+
+補足: RBAC 導入のマイグレーション(`0002`)は、既存 DB の**最古参ユーザーを自動的に super_admin に昇格**させる。再デプロイ後、最初に登録したアカウントがスーパー管理者になっている。
+
 ## スクレイピングについて
 
 - **ベストエフォート**です。Amazon は bot 対策で価格を取得できないことが多く、ヨドバシや他サイトも HTML 構造の変更で壊れることがあります。取得できない場合は**価格を手入力**してください。
