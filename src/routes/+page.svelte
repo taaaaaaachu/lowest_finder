@@ -129,10 +129,41 @@
 		await app.deleteGroup(g.id);
 	}
 
+	// グループ編集(タイトル・単位ラベル)。
+	let editingGroup = $state(false);
+	let editTitle = $state('');
+	let editUnit = $state('');
+
+	function startEditGroup() {
+		const g = app.selectedGroup;
+		if (!g) return;
+		editTitle = g.title;
+		editUnit = g.unitLabel;
+		editingGroup = true;
+	}
+
+	function cancelEditGroup() {
+		editingGroup = false;
+	}
+
+	async function saveEditGroup(e: SubmitEvent) {
+		e.preventDefault();
+		const g = app.selectedGroup;
+		if (!g || !editTitle.trim()) return;
+		await app.updateGroup(g.id, { title: editTitle.trim(), unitLabel: editUnit.trim() });
+		editingGroup = false;
+	}
+
 	function backToList() {
 		app.selectedGroupId = null;
 		app.items = [];
 		editingItem = null;
+		editingGroup = false;
+	}
+
+	function openGroup(id: string) {
+		editingGroup = false;
+		app.selectGroup(id);
 	}
 </script>
 
@@ -175,8 +206,27 @@
 		<div class="detail-head">
 			<button type="button" class="back" onclick={backToList}>‹ グループ一覧</button>
 			<h1>{g.title}</h1>
+			{#if !editingGroup}
+				<button type="button" class="edit" onclick={startEditGroup}>編集</button>
+			{/if}
 			<button type="button" class="danger" onclick={handleDeleteGroup}>グループ削除</button>
 		</div>
+		{#if editingGroup}
+			<form class="group-edit card" onsubmit={saveEditGroup}>
+				<label class="field">
+					<span>タイトル *</span>
+					<input type="text" bind:value={editTitle} placeholder="食器用洗剤" />
+				</label>
+				<label class="field">
+					<span>単位ラベル(任意・表示用)</span>
+					<input type="text" bind:value={editUnit} placeholder="ml" />
+				</label>
+				<div class="edit-actions">
+					<button type="submit" class="primary" disabled={!editTitle.trim()}>保存</button>
+					<button type="button" onclick={cancelEditGroup}>キャンセル</button>
+				</div>
+			</form>
+		{/if}
 		<p class="hint">
 			単価の安い順に並びます。単位はこのグループ内で揃えてください(単位変換はしません)。
 		</p>
@@ -214,7 +264,7 @@
 			<ul class="groups">
 				{#each app.groups as group (group.id)}
 					<li>
-						<button type="button" class="group-item" onclick={() => app.selectGroup(group.id)}>
+						<button type="button" class="group-item" onclick={() => openGroup(group.id)}>
 							<span class="g-title">{group.title}</span>
 							{#if group.unitLabel.trim()}<span class="g-unit">単位: {group.unitLabel}</span>{/if}
 							<span class="chev">›</span>
@@ -288,6 +338,35 @@
 
 	.back:hover {
 		background: #f0f2f5;
+	}
+
+	.edit {
+		flex-shrink: 0;
+		padding: 0.4rem 0.75rem;
+		border: 1px solid var(--border);
+		background: var(--surface);
+		color: var(--text);
+		border-radius: 8px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		box-shadow: var(--shadow);
+	}
+
+	.edit:hover {
+		background: #f0f2f5;
+	}
+
+	.group-edit {
+		margin: 0.75rem 0;
+		padding: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.edit-actions {
+		display: flex;
+		gap: 0.5rem;
 	}
 
 	.groups {
