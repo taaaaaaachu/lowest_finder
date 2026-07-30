@@ -10,6 +10,14 @@
  *   factor = ("+" | "-") factor | number | "(" expr ")"
  */
 
+/**
+ * 桁区切りのカンマ(半角 `,` ・全角 `，`)を取り除く。
+ * 「1,380」のように入力された数字を評価前に正規化するために使う。
+ */
+export function stripCommas(input: string): string {
+	return input.replace(/[,，]/g, '');
+}
+
 /** 式の評価結果。成功なら数値、失敗なら理由付きのエラー。 */
 export type EvalResult =
 	| { ok: true; value: number }

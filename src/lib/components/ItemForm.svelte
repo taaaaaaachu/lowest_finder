@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Item } from '$lib/types';
 	import type { ItemInput } from '$lib/repo/types';
-	import { evaluateExpression, type EvalResult } from '$lib/domain/expression';
+	import { evaluateExpression, stripCommas, type EvalResult } from '$lib/domain/expression';
 
 	interface Props {
 		groupId: string;
@@ -84,12 +84,24 @@
 		</label>
 		<label class="field">
 			<span>内容量{unitLabel.trim() ? `(${unitLabel.trim()})` : ''} *</span>
-			<input type="text" inputmode="text" bind:value={volume} placeholder="1380 または 690*2" />
+			<input
+				type="text"
+				inputmode="text"
+				bind:value={volume}
+				oninput={() => (volume = stripCommas(volume))}
+				placeholder="1380 または 690*2"
+			/>
 			{@render calcPreview(volume, volumeResult)}
 		</label>
 		<label class="field">
 			<span>価格(円)*</span>
-			<input type="text" inputmode="text" bind:value={price} placeholder="300 または 1000*1.1" />
+			<input
+				type="text"
+				inputmode="text"
+				bind:value={price}
+				oninput={() => (price = stripCommas(price))}
+				placeholder="300 または 1000*1.1"
+			/>
 			{@render calcPreview(price, priceResult)}
 		</label>
 		<label class="field url">

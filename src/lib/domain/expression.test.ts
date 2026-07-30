@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateExpression } from './expression';
+import { evaluateExpression, stripCommas } from './expression';
 
 /** ok を前提に値を取り出すヘルパ。 */
 function val(input: string): number {
@@ -96,5 +96,26 @@ describe('evaluateExpression', () => {
 	it('連続演算子は invalid', () => {
 		expect(evaluateExpression('3**2')).toEqual({ ok: false, reason: 'invalid' });
 		expect(evaluateExpression('3 2')).toEqual({ ok: false, reason: 'invalid' });
+	});
+});
+
+describe('stripCommas', () => {
+	it('半角カンマを除去する', () => {
+		expect(stripCommas('1,380')).toBe('1380');
+		expect(stripCommas('1,000,000')).toBe('1000000');
+	});
+
+	it('全角カンマを除去する', () => {
+		expect(stripCommas('1，380')).toBe('1380');
+	});
+
+	it('カンマを含まない文字列はそのまま', () => {
+		expect(stripCommas('1380')).toBe('1380');
+		expect(stripCommas('690*2')).toBe('690*2');
+		expect(stripCommas('')).toBe('');
+	});
+
+	it('カンマ除去後は計算式として評価できる', () => {
+		expect(evaluateExpression(stripCommas('1,000*1.1'))).toEqual({ ok: true, value: 1100 });
 	});
 });
