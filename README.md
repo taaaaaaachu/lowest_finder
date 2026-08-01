@@ -60,117 +60,20 @@ docker compose -f docker-compose.local.yml down -v        # DB ボリューム�
 
 ## デプロイ(Synology NAS + Docker + Cloudflare Tunnel)
 
-外部公開は **Cloudflare Tunnel** を使う(ポート開放不要・HTTPS 自動・NAS の IP を晒さない)。
-前提: Cloudflare 管理下のドメイン(例 `example.com`)。
+本番は **プル型 CI/CD** で運用する。`main` にマージすると GitHub Actions がイメージをビルドして
+GHCR に push し、NAS 上の共用 Watchtower が自動 pull → 再作成する。外部公開は **Cloudflare Tunnel**
+(ポート開放不要・HTTPS 自動・NAS の IP を晒さない)。
 
-### 0. NAS 側の前提
-
-- DSM 7.2 以降で **Container Manager**(旧「Docker」パッケージ)をインストール済みであること。
-  Docker に対応した機種が必要(x86 系のほとんど、および Docker 対応の一部モデル)。
-- 低スペック/低メモリ機だと、NAS 上での `npm ci`＋`vite build`＋better-sqlite3 のビルドが重いことがある。
-  厳しい場合は「別 PC でイメージを作って持ち込む」下記の補足を参照。
-
-### 1. Cloudflare Tunnel を作成
-
-1. Cloudflare **Zero Trust** ダッシュボード → **Networks > Tunnels** → **Create a tunnel** →
-   タイプ **Cloudflared** を選び、名前を付ける。
-2. 表示される **Tunnel token** を控える(`docker compose` の `TUNNEL_TOKEN` に使う)。
-3. **Public Hostname** を追加:
-   - Subdomain: `lowest`(任意) / Domain: `example.com`
-   - Service: **HTTP** → `app:3000`(compose 内のサービス名:ポート)
-
-### 2. コードを NAS に置く
-
-共有フォルダ(例 `/volume1/docker/lowest-finder`)にプロジェクト一式を配置する。方法はどちらでも:
-
-- **git**: NAS に SSH して `git clone <このリポジトリ>`
-- **File Station / SMB**: 手元のフォルダをコピー(`node_modules` や `.svelte-kit` は不要)
-
-### 3. .env を用意
-
-プロジェクト直下に `.env` を作る:
-
-```bash
-cp .env.example .env
-# ORIGIN=https://lowest.example.com  (自分の公開 URL に一致させる)
-# TUNNEL_TOKEN=（手順1で控えたトークン）
+```
+push/PR ─▶ GitHub Actions(check/test)
+   main ─▶ Docker ビルド ─▶ GHCR(ghcr.io/taaaaaaachu/lowest_finder:latest, :sha-xxxx)
+                                └─▶ NAS の Watchtower が自動 pull ─▶ 再作成(起動時にマイグレーション)
 ```
 
-`ORIGIN` は adapter-node が form action / CSRF 検証で使うため、**公開 URL と完全一致**させること。
-
-### 4a. 起動(SSH — 推奨・確実)
-
-DSM の **コントロールパネル → 端末と SNMP → SSH を有効化** し、NAS に SSH:
-
-```bash
-cd /volume1/docker/lowest-finder
-sudo docker compose up -d --build      # 初回はビルドで数分〜
-sudo docker compose logs -f            # 起動確認(app に Listening on ...:3000)
-```
-
-- `app`: 起動時にマイグレーション適用 → サーバー起動。DB は名前付きボリューム `db-data`(`/data/app.sqlite`)に永続化。
-- `cloudflared`: トンネルを張り `https://lowest.example.com` → `app:3000` を公開。
-- `restart: "no"` としているため**自動再起動はしない**(重要サービスではないので手動運用)。
-  NAS 再起動後などに使いたいときは `sudo docker compose up -d` で起動する。
-
-ブラウザで `https://lowest.example.com` を開いて確認。
-
-### 4b. 起動(Container Manager GUI)
-
-SSH を使わない場合:
-
-1. **Container Manager → プロジェクト → 作成**
-2. パスに手順2で置いたフォルダ(`docker-compose.yml` のある場所)を指定
-3. ソースは既存の `docker-compose.yml` を使用。環境変数(`ORIGIN` / `TUNNEL_TOKEN`)は `.env` を置いておけば読まれる
-4. ビルドして起動
-
-### バックアップ
-
-DB は単一ファイル。名前付きボリューム `db-data` 内の `app.sqlite`(+ WAL)をコピーするだけでよい。
-**Hyper Backup 等で扱いやすくしたい**なら、`docker-compose.yml` の `app.volumes` を共有フォルダへの
-バインドマウントに変えると、DSM のバックアップ対象に含めやすい:
-
-```yaml
-    volumes:
-      - /volume1/docker/lowest-finder/data:/data
-```
-
-### 補足: NAS が非力でビルドが厳しい場合
-
-手元の PC(NAS と同じ CPU アーキテクチャ)でイメージを作り、NAS に持ち込む:
-
-```bash
-# PC 側(NAS が arm64 なら --platform linux/arm64 を付ける)
-docker build -t lowest-finder:latest .
-docker save lowest-finder:latest | gzip > lowest-finder.tar.gz
-# NAS に転送後、NAS 側で
-gunzip -c lowest-finder.tar.gz | sudo docker load
-# docker-compose.yml の app.build 行を消し image: lowest-finder:latest だけにして起動
-```
-
-### 更新(再デプロイ)
-
-コードを更新して NAS に反映する。**DB は名前付きボリューム `db-data` に残るのでデータは消えない**。スキーマ変更があっても、コンテナ起動時に `docker-entrypoint.sh` がマイグレーションを自動適用する。
-
-大前提:
-
-- **`.env` は消さない・上書きしない**(実トークンが入っている)。
-- **`docker compose down -v` は使わない**(`-v` はボリュームごと DB を消す)。更新は `up -d --build` でよい。
-
-SSH の場合:
-
-```bash
-cd /volume1/docker/lowest-finder
-# コードを更新(git なら pull、File Station なら .env 以外を上書きコピー)
-sudo docker compose up -d --build   # イメージ再ビルド+コンテナ再作成(ボリュームは保持)
-sudo docker compose logs -f app     # 「マイグレーション適用完了」→「Listening on ...」を確認
-```
-
-Container Manager(GUI)の場合:
-
-1. File Station で**新しいソースを上書きコピー**(`.env` は残す。`node_modules` などは不要)。
-2. Container Manager → プロジェクトを開き、**ビルドし直して**コンテナを再作成する。
-3. `app` コンテナのログでマイグレーション適用と起動を確認。
+- **手順・トラブルシュートの正典は [docs/deploy.md](./docs/deploy.md)**(初回セットアップ、GHCR 認証、
+  build 型からの移行、Watchtower、ロールバック、起動バナーでのバージョン確認)。
+- 通常のリリースは **PR → `main` マージだけ**。5 分以内に NAS が自動反映する。NAS 上でのビルドは不要。
+- `.env`(`ORIGIN` / `TUNNEL_TOKEN`)と `data/`(SQLite)は温存する。`docker compose down -v` は使わない。
 
 補足: RBAC 導入のマイグレーション(`0002`)は、既存 DB の**最古参ユーザーを自動的に super_admin に昇格**させる。再デプロイ後、最初に登録したアカウントがスーパー管理者になっている。
 

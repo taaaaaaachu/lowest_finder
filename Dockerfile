@@ -23,6 +23,12 @@ ENV NODE_ENV=production
 ENV DATABASE_PATH=/data/app.sqlite
 ENV PORT=3000
 
+# CI(build-push)が --build-arg GIT_SHA=<commit> を渡す。起動バナーで
+# どのイメージが動いているか(= Watchtower の入れ替えが効いたか)を確認するのに使う。
+# ローカルビルドで未指定なら dev のまま。
+ARG GIT_SHA=dev
+ENV APP_VERSION=$GIT_SHA
+
 COPY package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build

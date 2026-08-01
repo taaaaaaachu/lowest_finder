@@ -2,10 +2,13 @@
 # app(SvelteKit/adapter-node)を cloudflared 経由で外部公開する。
 services:
   app:
-    build: .
-    image: lowest-finder:latest
-    # 自動再起動はしない(重要サービスではないため手動起動 = docker compose up -d)。
-    restart: "no"
+    # GitHub Actions がビルドして GHCR に push したイメージを使う(NAS ではビルドしない)。
+    # Watchtower がこのイメージの更新を監視し、新しい :latest を検知したら自動 pull → 再作成する。
+    image: ghcr.io/taaaaaaachu/lowest_finder:latest
+    restart: unless-stopped
+    # Watchtower の監視対象に含めるラベル(WATCHTOWER_LABEL_ENABLE=true と対で機能する)。
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     environment:
       # adapter-node がリバースプロキシ配下で form action / CSRF 検証に使う公開オリジン。
       # 自分のサブドメインに合わせて変更する。
@@ -22,7 +25,7 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    restart: "no"
+    restart: unless-stopped
     # Cloudflare Zero Trust ダッシュボードで発行した Tunnel トークンを .env に置く。
     # Public Hostname のサービスは http://app:3000 に向ける。
     command: tunnel --no-autoupdate run
@@ -30,3 +33,8 @@ services:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
     depends_on:
       - app
+
+# ※ イメージ自動更新の Watchtower は、この lowest_finder プロジェクトには含めない。
+#    NAS 全体で 1 台だけ独立プロジェクト(/volume1/docker/watchtower)として動かし、
+#    Docker ホスト全体の enable ラベル付きコンテナ(この app 含む)を監視する。
+#    lowest_finder を作り直しても自動更新が止まらないようにするための分離。詳細は docs/deploy.md。
