@@ -10,7 +10,11 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			serviceWorker: {
+				// layoutからビルドversion付きURLを登録し、CDNの旧版を回避する。
+				register: false
+			}
 		})
 	],
 	test: {

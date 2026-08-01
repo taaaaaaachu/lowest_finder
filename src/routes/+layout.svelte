@@ -1,14 +1,26 @@
 <script lang="ts">
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import { onMount } from 'svelte';
+	import { version } from '$app/environment';
 	import { enhance } from '$app/forms';
 	import { canAccessAdmin } from '$lib/rbac';
 
 	let { children, data } = $props();
+
+	onMount(() => {
+		if (!('serviceWorker' in navigator)) return;
+
+		// URLをビルドごとに変え、Cloudflareやブラウザに残った旧版の再登録を避ける。
+		navigator.serviceWorker
+			.register(`/service-worker.js?v=${encodeURIComponent(version)}`, {
+				scope: '/',
+				updateViaCache: 'none'
+			})
+			.catch((error: unknown) => console.error('Service Workerの登録に失敗しました', error));
+	});
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
 	<title>Lowest Finder — 容量単価比較</title>
 </svelte:head>
 

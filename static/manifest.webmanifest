@@ -3,6 +3,7 @@
 	"short_name": "LowestFinder",
 	"description": "同じ商品の容量違いを容量あたりの単価で比較して、一番安いものを選ぶ。",
 	"lang": "ja",
+	"id": "/",
 	"start_url": "/",
 	"scope": "/",
 	"display": "standalone",

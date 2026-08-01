@@ -1,70 +1,62 @@
 /// <reference types="@sveltejs/kit" />
 /// <reference lib="webworker" />
 
-// SvelteKit ネイティブの Service Worker。アプリシェル(ビルド成果物・静的ファイル)を
-// キャッシュし、オフラインでも起動できるようにする。会員データ自体は
-// IndexedDB(OfflineCache)側で扱うため、ここでは /api を積極キャッシュしない。
-
-import { build, files, version } from '$service-worker';
+// Android Chromeのインストール要件を満たすため、ナビゲーションをオフラインでも
+// 処理する。認証済みHTML・API・ユーザー固有データは保存せず、固定の公開ページだけを扱う。
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
-const CACHE = `cache-${version}`;
-const ASSETS = [...build, ...files];
+const OFFLINE_CACHE_PREFIX = 'lowest-finder-offline-';
+const OFFLINE_CACHE = `${OFFLINE_CACHE_PREFIX}v1`;
+const OFFLINE_URL = '/offline.html';
+// 旧SWがSvelteKitの数値versionで作ったキャッシュ。認証済みHTMLを含み得るため移行時に破棄する。
+const LEGACY_ASSET_CACHE = /^cache-\d+$/;
 
 sw.addEventListener('install', (event) => {
 	event.waitUntil(
-		caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => sw.skipWaiting())
+		Promise.all([
+			caches
+				.open(OFFLINE_CACHE)
+				.then((cache) => cache.add(new Request(OFFLINE_URL, { cache: 'reload' }))),
+			sw.skipWaiting()
+		])
 	);
 });
 
 sw.addEventListener('activate', (event) => {
 	event.waitUntil(
-		(async () => {
-			for (const key of await caches.keys()) {
-				if (key !== CACHE) await caches.delete(key);
-			}
-			await sw.clients.claim();
-		})()
+		Promise.all([
+			caches
+				.keys()
+				.then((names) =>
+					Promise.all(
+						names
+							.filter(
+								(name) =>
+									(name.startsWith(OFFLINE_CACHE_PREFIX) && name !== OFFLINE_CACHE) ||
+									LEGACY_ASSET_CACHE.test(name)
+							)
+							.map((name) => caches.delete(name))
+					)
+				),
+			sw.clients.claim()
+		])
 	);
 });
 
 sw.addEventListener('fetch', (event) => {
-	const { request } = event;
-	if (request.method !== 'GET') return;
+	if (event.request.mode !== 'navigate') return;
 
-	const url = new URL(request.url);
-	if (url.origin !== location.origin) return;
-	// API はオンライン前提。SW ではキャッシュせずネットワークに任せる。
-	if (url.pathname.startsWith('/api/')) return;
-
-	// ビルド済みアセットはキャッシュ優先(不変・version 付き)。
-	if (ASSETS.includes(url.pathname)) {
-		event.respondWith(
-			caches.open(CACHE).then(async (cache) => {
-				const cached = await cache.match(url.pathname);
-				return cached ?? fetch(request);
-			})
-		);
-		return;
-	}
-
-	// それ以外(ページ遷移など)はネットワーク優先、失敗時はキャッシュへフォールバック。
 	event.respondWith(
-		(async () => {
-			const cache = await caches.open(CACHE);
-			try {
-				const response = await fetch(request);
-				if (response.ok) cache.put(request, response.clone());
-				return response;
-			} catch {
-				const cached = await cache.match(request);
-				if (cached) return cached;
-				// 最低限、トップページのシェルを返して起動できるようにする。
-				const shell = await cache.match('/');
-				if (shell) return shell;
-				throw new Error('オフラインで利用可能なキャッシュがありません。');
-			}
-		})()
+		fetch(event.request).catch(async () => {
+			const offlinePage = await caches.match(OFFLINE_URL);
+			return (
+				offlinePage ??
+				new Response('オフラインです。通信状態を確認してから、もう一度お試しください。', {
+					status: 503,
+					headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+				})
+			);
+		})
 	);
 });
