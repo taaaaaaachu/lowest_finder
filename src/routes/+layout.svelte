@@ -21,7 +21,7 @@
 </script>
 
 <svelte:head>
-	<title>Lowest Finder — 容量単価比較</title>
+	<title>Lowest Finder</title>
 </svelte:head>
 
 <div class="app">

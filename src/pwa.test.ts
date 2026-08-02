@@ -41,7 +41,7 @@ function pngDimensions(path: string): { width: number; height: number } {
 describe('Android WebAPK向けPWA', () => {
 	it('インストールに必要なmanifestメタデータを公開する', () => {
 		expect(manifest).toMatchObject({
-			name: 'Lowest Finder — 容量単価比較',
+			name: 'Lowest Finder',
 			short_name: 'LowestFinder',
 			id: '/',
 			start_url: '/',
@@ -76,7 +76,7 @@ describe('Android WebAPK向けPWA', () => {
 	});
 
 	it('最終HTMLテンプレートにアプリ名とPWAメタデータを含める', () => {
-		expect(appTemplate).toContain('<title>Lowest Finder — 容量単価比較</title>');
+		expect(appTemplate).toContain('<title>Lowest Finder</title>');
 		expect(appTemplate).toContain('<link rel="manifest" href="/manifest.webmanifest" />');
 		expect(appTemplate).toContain('<meta name="theme-color" content="#2563eb" />');
 		expect(appTemplate).toContain('<link rel="icon"');
