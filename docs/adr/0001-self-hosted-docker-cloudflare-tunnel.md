@@ -2,7 +2,7 @@
 
 ## 決定
 
-本サービスはクラウドPaaSではなく、**Synology NAS 上の Docker** で稼働させる。外部公開は **Cloudflare Tunnel** で行い(ポート開放不要・HTTPS自動・NASのグローバルIPを晒さない)、`example.com` のサブドメインに割り当てる。アプリは **SvelteKit(adapter-node)フルスタック1本**、DBは **SQLite(Dockerボリューム上のファイル)+ Drizzle ORM**。実行構成は `app` + `cloudflared` の2コンテナを基本とする。
+本サービスはクラウドPaaSではなく、**Synology NAS 上の Docker** で稼働させる。外部公開は **Cloudflare Tunnel** で行い(ポート開放不要・HTTPS自動・NASのグローバルIPを晒さない)、`example.com` のサブドメインに割り当てる。アプリは **SvelteKit(adapter-node)フルスタック1本**、DBは **SQLite(Dockerボリューム上のファイル)+ Drizzle ORM**。Cloudflare Tunnel は NAS 上の共用ネットワークに接続する独立プロジェクトとして 1 コンテナだけ運用し、アプリ compose では `app` のみを公開対象として定義する。
 
 ## 背景・理由
 

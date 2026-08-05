@@ -51,7 +51,7 @@
    は **この時点では消さない**でください。
 
 2. **Container Manager → プロジェクト `lowest-finder` → ビルド/再起動**(up)。
-   `app` と `cloudflared` が起動します。
+   `app` が起動します。`cloudflared` は NAS 全体で共用する独立プロジェクトから起動します。
 
 3. **外部からの書き込みを止める**ため、Container Manager で **`cloudflared` コンテナだけを停止**
    します(これで公開 URL からアクセスできなくなり、DB は書き込まれない状態になります。

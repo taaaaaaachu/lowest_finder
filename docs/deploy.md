@@ -26,13 +26,13 @@ push/PR ──▶ GitHub Actions (check / test)
 | ファイル | 役割 |
 | --- | --- |
 | `.github/workflows/ci.yml` | CI(check/test)+ main のイメージを GHCR に配布 |
-| `docker-compose.yml` | NAS 本番。`app`(GHCR pull)+ `cloudflared`。Watchtower は含まない |
+| `docker-compose.yml` | NAS 本番。`app`(GHCR pull)。共用ネットワークに参加し、Cloudflare Tunnel は含まない |
 | `docker-compose.local.yml` | ローカル動作確認用(こちらは従来どおり `build:`。ポート直公開) |
 | `Dockerfile` / `docker-entrypoint.sh` | イメージ定義と起動時マイグレーション・起動バナー |
 
 > CI は lint スクリプトが無いため **型チェック(svelte-check)+ テスト(vitest)** の 2 本を回す。
 
-Watchtower は本リポジトリ外の**独立した Container Manager プロジェクト**(NAS 上
+Cloudflare Tunnel と Watchtower は本リポジトリ外の**独立した Container Manager プロジェクト**(NAS 上
 `/volume1/docker/watchtower`)として1台だけ動かす。compose 定義は後述の
 「Watchtower(独立プロジェクト)」を正典とする。
 
@@ -82,7 +82,31 @@ GHCR パッケージは既定で private。Watchtower が pull できるよう�
 PAT の発行・上記ログイン・compose の `config.json` マウント行はすべて不要になる
 (イメージには秘密が焼き込まれていない = `ORIGIN` は実行時注入のため)。
 
-### 3. NAS で本番を起動(build 型からの移行)
+### 3. NAS で共用ネットワークと Cloudflare Tunnel を起動
+
+`stockify` と同じ NAS で運用する場合、Cloudflare Tunnel は NAS 全体で 1 コンテナだけ起動する。
+
+1. 初回だけ共用ネットワークを作成する:
+
+   ```bash
+   sudo docker network create cloudflare-proxy
+   ```
+
+2. 親フォルダの `cloudFlarred/docker-compose.yml` を NAS の独立プロジェクト
+   `/volume1/docker/cloudflared/docker-compose.yml` に配置し、`.env` に共用 Tunnel の
+   `TUNNEL_TOKEN` を設定して起動する:
+
+   ```bash
+   cd /volume1/docker/cloudflared
+   sudo docker compose up -d
+   ```
+
+   Cloudflare Zero Trust の Public Hostname は次のように設定する:
+
+   - `stock.example.com` → `http://stockify-app:3000`
+   - `lowest.example.com` → `http://lowest-finder-app:3000`
+
+### 4. NAS で lowest_finder 本番を起動(build 型からの移行)
 
 lowest_finder は既に NAS(`/volume1/docker/lowest_finder`)で **build 型**で稼働中。
 これを pull 型へ差し替える。**`data/`(SQLite)と `.env` は温存する**。
@@ -94,7 +118,7 @@ lowest_finder は既に NAS(`/volume1/docker/lowest_finder`)で **build 型**で
    ```bash
    cd /volume1/docker/lowest_finder
    sudo docker compose pull app        # GHCR から :latest を取得
-   sudo docker compose up -d           # app を新イメージで再作成、cloudflared も起動
+   sudo docker compose up -d           # app を新イメージで再作成
    sudo docker compose logs -f app     # 「lowest_finder 起動: version=...」→「マイグレーション適用完了」を確認
    ```
 
@@ -137,6 +161,9 @@ services:
 - Watchtower は**このプロジェクト自身も含む**すべてのラベル付きコンテナを見るが、enable ラベルを
   付けなければ対象外。cloudflared は対象外のまま。
 - **単一障害点**である点に注意: この Watchtower を止めると全プロジェクトの自動更新が止まる。
+
+Cloudflare Tunnel も NAS 全体で 1 コンテナだけを起動する。lowest_finder 側の compose に
+`cloudflared` を追加したり、lowest_finder 側の `.env` に `TUNNEL_TOKEN` を設定したりしない。
 
 ## 日常運用
 

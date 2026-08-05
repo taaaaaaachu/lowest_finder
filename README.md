@@ -73,7 +73,7 @@ push/PR ─▶ GitHub Actions(check/test)
 - **手順・トラブルシュートの正典は [docs/deploy.md](./docs/deploy.md)**(初回セットアップ、GHCR 認証、
   build 型からの移行、Watchtower、ロールバック、起動バナーでのバージョン確認)。
 - 通常のリリースは **PR → `main` マージだけ**。5 分以内に NAS が自動反映する。NAS 上でのビルドは不要。
-- `.env`(`ORIGIN` / `TUNNEL_TOKEN`)と `data/`(SQLite)は温存する。`docker compose down -v` は使わない。
+- `.env`(`ORIGIN`)と `data/`(SQLite)は温存する。`TUNNEL_TOKEN` は共用 Cloudflare Tunnel プロジェクトでのみ設定し、`docker compose down -v` は使わない。
 
 補足: RBAC 導入のマイグレーション(`0002`)は、既存 DB の**最古参ユーザーを自動的に super_admin に昇格**させる。再デプロイ後、最初に登録したアカウントがスーパー管理者になっている。
 
