@@ -18,9 +18,15 @@ export function stripCommas(input: string): string {
 	return input.replace(/[,，]/g, '');
 }
 
-/** 全角数字を半角数字へ変換する。 */
+/**
+ * 価格・内容量の入力値を正規化する。
+ * 全角数字を半角へ変換し、カンマと許可されていない文字を取り除く。
+ */
 export function normalizeNumericInput(input: string): string {
-	return input.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - '０'.charCodeAt(0) + '0'.charCodeAt(0)));
+	const halfWidth = input.replace(/[０-９]/g, (digit) =>
+		String.fromCharCode(digit.charCodeAt(0) - '０'.charCodeAt(0) + '0'.charCodeAt(0))
+	);
+	return stripCommas(halfWidth).replace(/[^0-9.+*/()\-]/g, '');
 }
 
 /** 式の評価結果。成功なら数値、失敗なら理由付きのエラー。 */

@@ -110,8 +110,20 @@ describe('normalizeNumericInput', () => {
 		expect(evaluateExpression(normalized)).toEqual({ ok: true, value: 2000 });
 	});
 
-	it('数字以外の文字はそのままにする', () => {
-		expect(normalizeNumericInput('1,０００*２')).toBe('1,000*2');
+	it('小数点・演算子・括弧を保持する', () => {
+		expect(normalizeNumericInput('(１０００.５+２)*３/２')).toBe('(1000.5+2)*3/2');
+	});
+
+	it('カンマを除去する', () => {
+		expect(normalizeNumericInput('1,０００，０００*２')).toBe('1000000*2');
+	});
+
+	it('空白・文字・絵文字・未対応記号を削除する', () => {
+		expect(normalizeNumericInput('abc １０００*２円😀=')).toBe('1000*2');
+	});
+
+	it('全角括弧は許可せず削除する', () => {
+		expect(normalizeNumericInput('（１０００＋２）')).toBe('10002');
 	});
 });
 

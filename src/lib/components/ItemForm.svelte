@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Item } from '$lib/types';
 	import type { ItemInput } from '$lib/repo/types';
-	import { evaluateExpression, normalizeNumericInput, stripCommas, type EvalResult } from '$lib/domain/expression';
+	import { evaluateExpression, normalizeNumericInput, type EvalResult } from '$lib/domain/expression';
 
 	interface Props {
 		groupId: string;
@@ -88,7 +88,7 @@
 				type="text"
 				inputmode="text"
 				bind:value={volume}
-				oninput={() => (volume = normalizeNumericInput(stripCommas(volume)))}
+				oninput={() => (volume = normalizeNumericInput(volume))}
 				placeholder="1380 または 690*2"
 			/>
 			{@render calcPreview(volume, volumeResult)}
@@ -99,7 +99,7 @@
 				type="text"
 				inputmode="text"
 				bind:value={price}
-				oninput={() => (price = normalizeNumericInput(stripCommas(price)))}
+				oninput={() => (price = normalizeNumericInput(price))}
 				placeholder="300 または 1000*1.1"
 			/>
 			{@render calcPreview(price, priceResult)}
