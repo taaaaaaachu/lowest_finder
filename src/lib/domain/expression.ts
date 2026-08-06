@@ -18,6 +18,11 @@ export function stripCommas(input: string): string {
 	return input.replace(/[,，]/g, '');
 }
 
+/** 全角数字を半角数字へ変換する。 */
+export function normalizeNumericInput(input: string): string {
+	return input.replace(/[０-９]/g, (digit) => String.fromCharCode(digit.charCodeAt(0) - '０'.charCodeAt(0) + '0'.charCodeAt(0)));
+}
+
 /** 式の評価結果。成功なら数値、失敗なら理由付きのエラー。 */
 export type EvalResult =
 	| { ok: true; value: number }

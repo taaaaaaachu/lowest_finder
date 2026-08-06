@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateExpression, stripCommas } from './expression';
+import { evaluateExpression, normalizeNumericInput, stripCommas } from './expression';
 
 /** ok を前提に値を取り出すヘルパ。 */
 function val(input: string): number {
@@ -74,7 +74,7 @@ describe('evaluateExpression', () => {
 	it('文字混入は invalid', () => {
 		expect(evaluateExpression('100 * abc')).toEqual({ ok: false, reason: 'invalid' });
 		expect(evaluateExpression('1,000')).toEqual({ ok: false, reason: 'invalid' });
-		expect(evaluateExpression('１００')).toEqual({ ok: false, reason: 'invalid' }); // 全角は非対応
+		expect(evaluateExpression('１００')).toEqual({ ok: false, reason: 'invalid' }); // 正規化前は非対応
 	});
 
 	it('括弧の不整合は invalid', () => {
@@ -96,6 +96,22 @@ describe('evaluateExpression', () => {
 	it('連続演算子は invalid', () => {
 		expect(evaluateExpression('3**2')).toEqual({ ok: false, reason: 'invalid' });
 		expect(evaluateExpression('3 2')).toEqual({ ok: false, reason: 'invalid' });
+	});
+});
+
+describe('normalizeNumericInput', () => {
+	it('全角数字を半角数字へ変換する', () => {
+		expect(normalizeNumericInput('１２３４５６７８９０')).toBe('1234567890');
+	});
+
+	it('計算式内の全角数字も変換する', () => {
+		const normalized = normalizeNumericInput('１０００*２');
+		expect(normalized).toBe('1000*2');
+		expect(evaluateExpression(normalized)).toEqual({ ok: true, value: 2000 });
+	});
+
+	it('数字以外の文字はそのままにする', () => {
+		expect(normalizeNumericInput('1,０００*２')).toBe('1,000*2');
 	});
 });
 
