@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { Item } from '$lib/types';
+	import type { ItemInput } from '$lib/repo/types';
 	import { unitPrice } from '$lib/domain/unitPrice';
 	import { formatPrice, formatUnitPrice, formatDateTime } from '$lib/format';
+	import ItemForm from './ItemForm.svelte';
 
 	interface Props {
 		/** 単価順にソート済みの想定。 */
@@ -13,9 +15,23 @@
 		onscrape?: (item: Item) => void;
 		/** 価格取得中のアイテムID。 */
 		scrapingId?: string | null;
+		/** 編集中のアイテム。指定した行の直下に編集フォームを展開する。 */
+		editingItem?: Item | null;
+		onsubmitEdit: (input: ItemInput) => Promise<void> | void;
+		oncancelEdit: () => void;
 	}
 
-	let { items, unitLabel, onedit, ondelete, onscrape, scrapingId = null }: Props = $props();
+	let {
+		items,
+		unitLabel,
+		onedit,
+		ondelete,
+		onscrape,
+		scrapingId = null,
+		editingItem = null,
+		onsubmitEdit,
+		oncancelEdit
+	}: Props = $props();
 
 	// 最安(単価が算出できる先頭)を強調するため、最小単価を求める。
 	const cheapestId = $derived.by(() => {
@@ -76,6 +92,19 @@
 					</button>
 				</div>
 			</li>
+			{#if editingItem?.id === item.id}
+				<li class="edit-row">
+					{#key editingItem.id}
+						<ItemForm
+							groupId={editingItem.groupId}
+							{unitLabel}
+							item={editingItem}
+							onsubmit={onsubmitEdit}
+							oncancel={oncancelEdit}
+						/>
+					{/key}
+				</li>
+			{/if}
 		{/each}
 	</ul>
 {/if}
@@ -110,6 +139,13 @@
 	.row.best {
 		border-color: var(--best);
 		background: var(--best-bg);
+	}
+
+	.edit-row {
+		padding: 0.85rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
 	}
 
 	.main {

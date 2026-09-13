@@ -238,19 +238,14 @@
 			ondelete={handleDeleteItem}
 			onscrape={user && !app.offline ? handleScrape : undefined}
 			{scrapingId}
+			{editingItem}
+			onsubmitEdit={handleUpdateItem}
+			oncancelEdit={() => (editingItem = null)}
 		/>
 
 		<section class="form-card card">
-			<h2>{editingItem ? '商品を編集' : '商品を追加'}</h2>
-			{#key editingItem?.id ?? 'new'}
-				<ItemForm
-					groupId={g.id}
-					unitLabel={g.unitLabel}
-					item={editingItem}
-					onsubmit={editingItem ? handleUpdateItem : handleAddItem}
-					oncancel={editingItem ? () => (editingItem = null) : undefined}
-				/>
-			{/key}
+			<h2>商品を追加</h2>
+			<ItemForm groupId={g.id} unitLabel={g.unitLabel} onsubmit={handleAddItem} />
 		</section>
 	</div>
 {:else}
