@@ -35,16 +35,23 @@ const amazon: Adapter = {
 		const name =
 			root.querySelector('#productTitle')?.text.trim() || ogTitle(root) || null;
 
-		// 1) 表示価格 .a-price .a-offscreen(例: <span class="a-offscreen">¥1,380</span>)
-		let price = parsePrice(root.querySelector('.a-price .a-offscreen')?.text);
+		// 1) 定期おトク便の価格(通常価格より安いため優先。#subscriptionPrice 配下)
+		let price = parsePrice(
+			root.querySelector('#subscriptionPrice .a-price .a-offscreen')?.text
+		);
 
-		// 2) ページ埋め込み JSON の priceAmount
+		// 2) 表示価格 .a-price .a-offscreen(例: <span class="a-offscreen">¥1,380</span>)
+		if (price === null) {
+			price = parsePrice(root.querySelector('.a-price .a-offscreen')?.text);
+		}
+
+		// 3) ページ埋め込み JSON の priceAmount
 		if (price === null) {
 			const m = root.innerHTML.match(/"priceAmount"\s*:\s*([\d.]+)/);
 			if (m) price = parsePrice(m[1]);
 		}
 
-		// 3) JSON-LD フォールバック
+		// 4) JSON-LD フォールバック
 		if (price === null) {
 			const jl = extractFromJsonLd(jsonLdBlocks(root));
 			price = jl.price;

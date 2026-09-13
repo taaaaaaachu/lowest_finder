@@ -15,6 +15,31 @@ describe('extract - Amazon', () => {
 		expect(r.adapter).toBe('amazon');
 	});
 
+	it('定期おトク便がある場合は通常価格より定期便価格を優先する', () => {
+		const html = `<html><body>
+			<span id="productTitle">洗剤 詰替</span>
+			<div data-csa-c-buying-option-type="NEW">
+				<div class="a-price"><span class="a-offscreen">¥647</span></div>
+			</div>
+			<div data-csa-c-buying-option-type="SNS">
+				<span id="subscriptionPrice">
+					<div class="a-price"><span class="a-offscreen">¥582</span></div>
+				</span>
+			</div>
+		</body></html>`;
+		const r = extract(url, html);
+		expect(r.price).toBe(582);
+	});
+
+	it('定期おトク便がない場合は通常価格を取る', () => {
+		const html = `<html><body>
+			<span id="productTitle">洗剤 詰替</span>
+			<div class="a-price"><span class="a-offscreen">¥647</span></div>
+		</body></html>`;
+		const r = extract(url, html);
+		expect(r.price).toBe(647);
+	});
+
 	it('priceAmount 埋め込みJSONにフォールバック', () => {
 		const html = `<html><body>
 			<span id="productTitle">商品X</span>
