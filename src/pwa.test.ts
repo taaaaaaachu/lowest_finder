@@ -82,11 +82,11 @@ describe('Android WebAPK向けPWA', () => {
 		expect(appTemplate).toContain('<link rel="icon"');
 	});
 
-	it('固定ページだけを保存し、ナビゲーション失敗時にオフライン応答する', () => {
+	it('アプリ本体をプリキャッシュし、認証状態が変わるとページキャッシュを消す', () => {
 		expect(serviceWorker).toContain("const OFFLINE_URL = '/offline.html'");
-		expect(serviceWorker).toContain("sw.addEventListener('fetch'");
-		expect(serviceWorker).toContain("event.request.mode !== 'navigate'");
-		expect(serviceWorker).not.toMatch(/cache\.put\(\s*(?:event\.)?request/);
+		expect(serviceWorker).toContain("import { build, files, version } from '$service-worker'");
+		expect(serviceWorker).toContain('strategyFor(event.request');
+		expect(serviceWorker).toContain('caches.delete(PAGE_CACHE)');
 		expect(serviceWorker).toContain('const LEGACY_ASSET_CACHE = /^cache-\\d+$/');
 		expect(serviceWorker).toContain('LEGACY_ASSET_CACHE.test(name)');
 		expect(offlinePage).toContain('<title>オフライン | Lowest Finder</title>');
