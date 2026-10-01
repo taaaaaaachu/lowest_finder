@@ -19,3 +19,12 @@ export function requireAdmin(locals: App.Locals): SessionUser {
 	}
 	return user;
 }
+
+/** 作成APIでクライアントが採番した id。未指定なら undefined、形式不正なら 400。 */
+export function clientId(body: unknown): string | undefined {
+	const id = (body as { id?: unknown } | null)?.id;
+	if (id === undefined) return undefined;
+	if (typeof id !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(id))
+		throw error(400, 'id が不正です。');
+	return id;
+}

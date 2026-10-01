@@ -21,7 +21,7 @@ beforeEach(() => {
 
 describe('グループ CRUD', () => {
 	it('作成・一覧・更新・削除ができる', () => {
-		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' });
+		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' })!;
 		expect(data.listGroups(db, USER_A)).toHaveLength(1);
 
 		const updated = data.updateGroup(db, USER_A, g.id, { title: '食器用洗剤' });
@@ -37,7 +37,7 @@ describe('グループ CRUD', () => {
 	});
 
 	it('他人のグループは更新・削除できない', () => {
-		const g = data.createGroup(db, USER_A, { title: 'A の洗剤', unitLabel: 'ml' });
+		const g = data.createGroup(db, USER_A, { title: 'A の洗剤', unitLabel: 'ml' })!;
 		expect(data.updateGroup(db, USER_B, g.id, { title: '乗っ取り' })).toBeNull();
 		expect(data.deleteGroup(db, USER_B, g.id)).toBe(false);
 		expect(data.listGroups(db, USER_A)).toHaveLength(1);
@@ -46,7 +46,7 @@ describe('グループ CRUD', () => {
 
 describe('商品 CRUD と所有権', () => {
 	it('作成・一覧・更新・削除ができる', () => {
-		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' });
+		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' })!;
 		const item = data.createItem(db, USER_A, {
 			groupId: g.id,
 			name: '詰替',
@@ -66,7 +66,7 @@ describe('商品 CRUD と所有権', () => {
 	});
 
 	it('他人のグループには商品を作れない', () => {
-		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' });
+		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' })!;
 		const item = data.createItem(db, USER_B, {
 			groupId: g.id,
 			name: 'x',
@@ -78,7 +78,7 @@ describe('商品 CRUD と所有権', () => {
 	});
 
 	it('他人の商品は更新・削除できない', () => {
-		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' });
+		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' })!;
 		const item = data.createItem(db, USER_A, {
 			groupId: g.id,
 			name: 'x',
@@ -92,12 +92,12 @@ describe('商品 CRUD と所有権', () => {
 	});
 
 	it('他人のグループの商品一覧は取得できない(null)', () => {
-		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' });
+		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' })!;
 		expect(data.listItems(db, USER_B, g.id)).toBeNull();
 	});
 
 	it('グループ削除で配下の商品もカスケード削除される', () => {
-		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' });
+		const g = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' })!;
 		data.createItem(db, USER_A, { groupId: g.id, name: 'a', volume: 100, price: 100, url: null });
 		data.deleteGroup(db, USER_A, g.id);
 		expect(data.exportAll(db, USER_A).items).toHaveLength(0);
@@ -141,5 +141,51 @@ describe('取り込み(importSnapshot)', () => {
 			items: []
 		});
 		expect(data.listGroups(db, USER_A)).toHaveLength(2);
+	});
+});
+
+describe('クライアント採番 id での作成(オフライン再送の冪等性)', () => {
+	it('指定した id で作成し、同じ id の再送は既存行を返して重複しない', () => {
+		const g1 = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' }, 'g-1');
+		const g2 = data.createGroup(db, USER_A, { title: '洗剤', unitLabel: 'ml' }, 'g-1');
+		expect(g1?.id).toBe('g-1');
+		expect(g2).toEqual(g1);
+		expect(data.listGroups(db, USER_A)).toHaveLength(1);
+
+		const input = {
+			groupId: 'g-1',
+			name: null,
+			volume: 1,
+			price: 1,
+			url: null
+		};
+		const i1 = data.createItem(db, USER_A, input, 'i-1');
+		const i2 = data.createItem(db, USER_A, input, 'i-1');
+		expect(i1?.id).toBe('i-1');
+		expect(i2).toEqual(i1);
+		expect(data.listItems(db, USER_A, 'g-1')).toHaveLength(1);
+	});
+
+	it('他人の行と id が衝突したら null で、相手の行は変えない', () => {
+		data.createGroup(db, USER_A, { title: 'A', unitLabel: 'ml' }, 'g-1');
+		data.createItem(
+			db,
+			USER_A,
+			{ groupId: 'g-1', name: 'A', volume: 1, price: 1, url: null },
+			'i-1'
+		);
+		const gB = data.createGroup(db, USER_B, { title: 'B', unitLabel: 'g' }, 'g-b')!;
+
+		expect(data.createGroup(db, USER_B, { title: 'B', unitLabel: 'g' }, 'g-1')).toBeNull();
+		expect(
+			data.createItem(
+				db,
+				USER_B,
+				{ groupId: gB.id, name: 'B', volume: 1, price: 1, url: null },
+				'i-1'
+			)
+		).toBeNull();
+		expect(data.listGroups(db, USER_A)[0].title).toBe('A');
+		expect(data.listItems(db, USER_A, 'g-1')?.[0].name).toBe('A');
 	});
 });

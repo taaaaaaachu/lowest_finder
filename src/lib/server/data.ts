@@ -33,8 +33,21 @@ export function listGroups(db: Db, userId: string): Group[] {
 	return db.select().from(groups).where(eq(groups.userId, userId)).all().map(toGroup);
 }
 
-export function createGroup(db: Db, userId: string, input: GroupInput): Group {
-	const row = { id: newId(), userId, title: input.title, unitLabel: input.unitLabel };
+/**
+ * グループを作成する。id を指定するとその id で作る(オフライン端末の採番)。
+ * 同じ id の再送は既存行を返して冪等にする。他人の行と衝突したら null。
+ */
+export function createGroup(db: Db, userId: string, input: GroupInput, id?: string): Group | null {
+	if (id) {
+		const existing = db.select().from(groups).where(eq(groups.id, id)).get();
+		if (existing) return existing.userId === userId ? toGroup(existing) : null;
+	}
+	const row = {
+		id: id ?? newId(),
+		userId,
+		title: input.title,
+		unitLabel: input.unitLabel
+	};
 	db.insert(groups).values(row).run();
 	return toGroup(row);
 }
@@ -94,10 +107,15 @@ export function listItems(db: Db, userId: string, groupId: string): Item[] | nul
 	return db.select().from(items).where(eq(items.groupId, groupId)).all().map(toItem);
 }
 
-export function createItem(db: Db, userId: string, input: ItemInput): Item | null {
+/** 商品を作成する。id の扱いは createGroup と同じ。所有でないグループや他人の行との衝突は null。 */
+export function createItem(db: Db, userId: string, input: ItemInput, id?: string): Item | null {
 	if (!ownsGroup(db, userId, input.groupId)) return null;
+	if (id) {
+		const existing = db.select().from(items).where(eq(items.id, id)).get();
+		if (existing) return findOwnedItem(db, userId, id) ? toItem(existing) : null;
+	}
 	const row = {
-		id: newId(),
+		id: id ?? newId(),
 		groupId: input.groupId,
 		name: input.name,
 		volume: input.volume,
