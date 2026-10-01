@@ -13,8 +13,12 @@ export class AppStore {
 	items = $state<Item[]>([]);
 	loading = $state(false);
 	error = $state<string | null>(null);
-	/** オフラインでキャッシュを表示している状態(会員モードのみ)。 */
+	/** サーバーに届かず、端末に保存したデータを表示している状態(会員モードのみ)。 */
 	offline = $state(false);
+	/** サーバーへ未送信の変更数(会員モードのみ)。 */
+	pending = $state(0);
+	/** セッション切れで未送信の変更を送れない状態(会員モードのみ)。 */
+	authRequired = $state(false);
 
 	/** 選択中グループ。 */
 	get selectedGroup(): Group | null {
@@ -42,6 +46,12 @@ export class AppStore {
 			this.selectedGroupId = null;
 			this.items = [];
 		}
+	}
+
+	/** 同期などでリポジトリの中身が変わったときに表示を取り直す。 */
+	async refresh(): Promise<void> {
+		await this.reloadGroups();
+		await this.reloadItems();
 	}
 
 	async selectGroup(id: string): Promise<void> {

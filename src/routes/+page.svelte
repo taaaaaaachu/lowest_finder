@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { app } from '$lib/stores/app.svelte';
 	import { IndexedDbRepository } from '$lib/repo/indexeddb';
-	import { CachingApiRepository } from '$lib/repo/cachingApi';
+	import { MemberRepository } from '$lib/repo/member';
 	import { scrapeUrl } from '$lib/repo/api';
 	import type { Item } from '$lib/types';
 	import type { ItemInput, Snapshot } from '$lib/repo/types';
@@ -25,17 +25,47 @@
 
 	const user = $derived(page.data.user);
 
-	onMount(async () => {
+	onMount(() => {
+		start();
+		if (!user) return;
+		// 通信回復・画面復帰で未送信の変更を送り、最新を取り直す。
+		const sync = () => {
+			if (app.repo instanceof MemberRepository) void app.repo.sync();
+		};
+		const syncIfVisible = () => {
+			if (document.visibilityState === 'visible') sync();
+		};
+		window.addEventListener('online', sync);
+		document.addEventListener('visibilitychange', syncIfVisible);
+		return () => {
+			window.removeEventListener('online', sync);
+			document.removeEventListener('visibilitychange', syncIfVisible);
+		};
+	});
+
+	async function start() {
 		if (user) {
-			// 会員モード: サーバーAPI + オフライン閲覧キャッシュ。
-			await app.setRepository(new CachingApiRepository((offline) => (app.offline = offline)));
+			// 会員モード: 端末のローカルDBで読み書きし、サーバーと同期する(オフラインでも記録可)。
+			const repo = new MemberRepository(user.id, {
+				onSync: (s) => {
+					app.offline = s.offline;
+					app.pending = s.pending;
+					app.authRequired = s.authRequired;
+					void app.refresh();
+				},
+				onRejected: (message) => (app.error = `サーバーに反映できなかった変更を取り消しました: ${message}`)
+			});
+			await app.setRepository(repo);
+			// 端末のデータが消されにくくする(未送信の変更を守るため)。
+			void navigator.storage?.persist?.();
+			void repo.sync();
 			await maybeOfferImport();
 		} else {
 			// ゲストモード: IndexedDB のみ(完全クライアント完結)。
 			await app.setRepository(new IndexedDbRepository());
 		}
 		ready = true;
-	});
+	}
 
 	// ゲスト用 IndexedDB にデータが残っていれば、会員データへの取り込みを提示する。
 	async function maybeOfferImport() {
@@ -51,7 +81,7 @@
 	}
 
 	async function confirmImport() {
-		if (!pendingImport || !(app.repo instanceof CachingApiRepository)) return;
+		if (!pendingImport || !(app.repo instanceof MemberRepository)) return;
 		importing = true;
 		try {
 			await app.repo.importSnapshot(pendingImport.snapshot);
@@ -187,9 +217,15 @@
 		</div>
 	{/if}
 
-	{#if app.offline}
+	{#if app.authRequired}
 		<div class="banner offline">
-			オフラインです。保存済みデータの閲覧のみできます(追加・編集はオンライン時に行ってください)。
+			ログインの有効期限が切れています。<a href="/login">再ログイン</a>すると未送信の変更({app.pending}件)を送信します。
+		</div>
+	{:else if app.offline}
+		<div class="banner offline">
+			オフラインです。変更は端末に保存し、通信が戻ったら送信します{app.pending
+				? `(未送信 ${app.pending}件)`
+				: ''}。
 		</div>
 	{/if}
 

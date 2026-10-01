@@ -87,6 +87,7 @@ describe('Android WebAPK向けPWA', () => {
 		expect(serviceWorker).toContain("import { build, files, version } from '$service-worker'");
 		expect(serviceWorker).toContain('strategyFor(event.request');
 		expect(serviceWorker).toContain('caches.delete(PAGE_CACHE)');
+		expect(serviceWorker).toContain('deleteMemberDbs()');
 		expect(serviceWorker).toContain('const LEGACY_ASSET_CACHE = /^cache-\\d+$/');
 		expect(serviceWorker).toContain('LEGACY_ASSET_CACHE.test(name)');
 		expect(offlinePage).toContain('<title>オフライン | Lowest Finder</title>');

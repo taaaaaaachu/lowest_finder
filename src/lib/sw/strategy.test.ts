@@ -25,10 +25,10 @@ describe('strategyFor', () => {
 		);
 	});
 
-	it('認証状態が変わるPOSTはユーザーキャッシュを消す', () => {
-		for (const path of ['/login', '/register', '/logout']) {
-			expect(strategyFor(req(path, 'POST'), origin, precached)).toBe('clear-user');
-		}
+	it('ログイン・登録のPOSTはページキャッシュを、ログアウトは会員データも消す', () => {
+		expect(strategyFor(req('/login', 'POST'), origin, precached)).toBe('clear-pages');
+		expect(strategyFor(req('/register', 'POST'), origin, precached)).toBe('clear-pages');
+		expect(strategyFor(req('/logout', 'POST'), origin, precached)).toBe('logout');
 	});
 
 	it('APIと他オリジンと他メソッドには関与しない', () => {

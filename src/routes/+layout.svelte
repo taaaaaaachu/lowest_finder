@@ -4,6 +4,7 @@
 	import { version } from '$app/environment';
 	import { enhance } from '$app/forms';
 	import { canAccessAdmin } from '$lib/rbac';
+	import { app } from '$lib/stores/app.svelte';
 
 	let { children, data } = $props();
 
@@ -38,7 +39,14 @@
 					{/if}
 					<a class="nav-link" href="/account">アカウント</a>
 					<span class="mode member">@{data.user.username}</span>
-					<form method="POST" action="/logout" use:enhance>
+					<form
+						method="POST"
+						action="/logout"
+						use:enhance={({ cancel }) => {
+							// ログアウトすると端末のデータ(未送信の変更を含む)は消える。
+							if (app.pending > 0 && !confirm(`未送信の変更が${app.pending}件あります。ログアウトすると失われます。ログアウトしますか?`)) cancel();
+						}}
+					>
 						<button type="submit" class="logout">ログアウト</button>
 					</form>
 				</div>
