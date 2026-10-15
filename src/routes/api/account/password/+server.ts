@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { setOwnPassword } from '$lib/server/admin';
-import { removePassword } from '$lib/server/credentials';
+import { getCredentialSummary, removePassword } from '$lib/server/credentials';
 import {
 	hashPassword,
 	validatePassword,
@@ -14,7 +14,8 @@ import type { RequestHandler } from './$types';
 
 /**
  * 本人によるパスワードの変更・設定。操作端末以外のセッションを無効化する。
- * currentPassword があればそれで本人確認し、無ければ(パスキーのみの会員など)直近の本人確認を求める。
+ * パスワードを持つ会員は常に現在のパスワードで本人確認する(直近の本人確認では代えない)。
+ * パスワードのない会員(パスキーのみ)が新しく設定する場合だけ、直近の本人確認を求める。
  */
 export const POST: RequestHandler = async ({ locals, request, cookies }) => {
 	const user = requireUser(locals);
@@ -25,7 +26,7 @@ export const POST: RequestHandler = async ({ locals, request, cookies }) => {
 	const pErr = validatePassword(newPassword);
 	if (pErr) throw error(400, pErr);
 
-	if (currentPassword) {
+	if (getCredentialSummary(db, user.id).hasPassword) {
 		// 乗っ取られたセッションでの勝手な変更を防ぐ。
 		const verified = await verifyCredentials(user.username, currentPassword);
 		if (!verified) throw error(400, '現在のパスワードが違います。');
