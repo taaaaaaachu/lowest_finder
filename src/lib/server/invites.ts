@@ -2,9 +2,9 @@ import { and, eq, desc, isNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { randomBytes } from 'node:crypto';
 import type { Db } from './db';
-import { users, invites, type InviteRow, type UserRow, type Role } from './db/schema';
+import { users, invites, passkeys, type InviteRow, type UserRow, type Role, type PasskeyRow } from './db/schema';
 
-function newId(): string {
+export function newId(): string {
 	return randomBytes(16).toString('hex');
 }
 
@@ -120,12 +120,45 @@ export function deleteInvite(db: Db, id: string): boolean {
 	return res.changes > 0;
 }
 
-export type RegisterResult =
-	| { ok: true; user: UserRow }
-	| {
-			ok: false;
-			error: 'invite_invalid' | 'invite_expired' | 'invite_used' | 'invite_revoked' | 'username_taken';
-	  };
+export type RegisterError =
+	| 'invite_invalid'
+	| 'invite_expired'
+	| 'invite_used'
+	| 'invite_revoked'
+	| 'username_taken';
+export const REGISTER_ERROR_MESSAGES: Record<RegisterError, string> = {
+	invite_invalid: '招待コードが正しくありません。',
+	invite_expired: 'この招待コードは有効期限が切れています。',
+	invite_used: 'この招待コードは既に使われています。',
+	invite_revoked: 'この招待コードは無効化されています。',
+	username_taken: 'このユーザー名は既に使われています。'
+};
+export type RegisterResult = { ok: true; user: UserRow } | { ok: false; error: RegisterError };
+
+function findInviteError(db: Db, code: string, now: number): { invite?: InviteRow; error?: RegisterError } {
+	const invite = db.select().from(invites).where(eq(invites.code, code)).get();
+	if (!invite) return { error: 'invite_invalid' };
+	if (invite.revokedAt !== null) return { error: 'invite_revoked' };
+	if (invite.usedBy) return { error: 'invite_used' };
+	if (invite.expiresAt !== null && now >= invite.expiresAt) return { error: 'invite_expired' };
+	return { invite };
+}
+
+/**
+ * 登録できそうかを事前に確かめる(パスキー登録でブラウザの操作に入る前の検証)。
+ * 確定の検証は registerUser のトランザクション内で改めて行う。
+ */
+export function precheckRegistration(
+	db: Db,
+	params: { username: string; requireInvite: boolean; inviteCode?: string }
+): RegisterError | null {
+	if (params.requireInvite) {
+		const { error } = findInviteError(db, params.inviteCode ?? '', Date.now());
+		if (error) return error;
+	}
+	const taken = db.select({ id: users.id }).from(users).where(eq(users.username, params.username.trim())).get();
+	return taken ? 'username_taken' : null;
+}
 
 /**
  * ユーザーを作成する。requireInvite が true のときは招待コードを検証・消費する。
@@ -135,34 +168,34 @@ export type RegisterResult =
 export function registerUser(
 	db: Db,
 	params: {
+		/** 省略時は新規採番。パスキー登録ではオプション生成時に決めた id を渡す。 */
+		id?: string;
 		username: string;
-		passwordHash: string;
+		/** null ならパスワードなし(passkey 必須)。 */
+		passwordHash: string | null;
+		/** パスキーで登録する場合の認証情報。ユーザー作成と同じトランザクションで保存する。 */
+		passkey?: Omit<PasskeyRow, 'userId' | 'lastUsedAt'>;
 		requireInvite: boolean;
 		inviteCode?: string;
 		/** 付与するロール。ブートストラップ時は super_admin、通常は user。 */
 		role: Role;
 	}
 ): RegisterResult {
+	if (!params.passwordHash && !params.passkey) {
+		throw new Error('パスワードかパスキーのどちらかが必要です。');
+	}
 	const now = Date.now();
 	try {
 		return db.transaction((tx): RegisterResult => {
 			let invite: InviteRow | undefined;
 			if (params.requireInvite) {
-				invite = tx
-					.select()
-					.from(invites)
-					.where(eq(invites.code, params.inviteCode ?? ''))
-					.get();
-				if (!invite) return { ok: false, error: 'invite_invalid' };
-				if (invite.revokedAt !== null) return { ok: false, error: 'invite_revoked' };
-				if (invite.usedBy) return { ok: false, error: 'invite_used' };
-				if (invite.expiresAt !== null && now >= invite.expiresAt) {
-					return { ok: false, error: 'invite_expired' };
-				}
+				const found = findInviteError(db, params.inviteCode ?? '', now);
+				if (found.error) return { ok: false, error: found.error };
+				invite = found.invite;
 			}
 
 			const user: UserRow = {
-				id: newId(),
+				id: params.id ?? newId(),
 				username: params.username.trim(),
 				passwordHash: params.passwordHash,
 				role: params.role,
@@ -173,6 +206,10 @@ export function registerUser(
 			} catch {
 				// UNIQUE 制約違反 = ユーザー名重複。トランザクションはロールバックされる。
 				return { ok: false, error: 'username_taken' };
+			}
+
+			if (params.passkey) {
+				tx.insert(passkeys).values({ ...params.passkey, userId: user.id }).run();
 			}
 
 			if (invite) {

@@ -8,8 +8,8 @@
  */
 export type Strategy = 'precache' | 'page' | 'clear-pages' | 'logout' | 'network';
 
-/** ログイン状態を変える POST 先(フォームアクション)。 */
-const LOGIN_PATHS = new Set(['/login', '/register']);
+/** ログイン状態を変える POST 先(フォームアクションとパスキーの API)。 */
+const LOGIN_PATHS = new Set(['/login', '/register', '/api/passkey/login', '/api/passkey/register/verify']);
 
 export function strategyFor(
 	req: { method: string; mode: string; url: string },

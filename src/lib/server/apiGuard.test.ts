@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clientId } from './apiGuard';
+import { clientId, requireRecentAuth } from './apiGuard';
 
 describe('clientId', () => {
 	it('未指定は undefined、UUID 等はそのまま返す', () => {
@@ -14,5 +14,25 @@ describe('clientId', () => {
 		for (const id of [1, '', '../x', 'a b', 'x'.repeat(65)]) {
 			expect(() => clientId({ id })).toThrow(expect.objectContaining({ status: 400 }));
 		}
+	});
+});
+
+describe('requireRecentAuth', () => {
+	const user = { id: 'u', username: 'u', role: 'user' as const };
+
+	it('直近に本人確認していれば、ユーザーとセッション id を返す', () => {
+		const locals = { user, session: { id: 's', verifiedAt: Date.now() } };
+		expect(requireRecentAuth(locals)).toEqual({ ...user, sessionId: 's' });
+	});
+
+	it('本人確認が古い・未確認なら 428、未ログインなら 401', () => {
+		const stale = { user, session: { id: 's', verifiedAt: Date.now() - 60 * 60 * 1000 } };
+		expect(() => requireRecentAuth(stale)).toThrow(expect.objectContaining({ status: 428 }));
+		expect(() => requireRecentAuth({ user, session: { id: 's', verifiedAt: null } })).toThrow(
+			expect.objectContaining({ status: 428 })
+		);
+		expect(() => requireRecentAuth({ user: null, session: null })).toThrow(
+			expect.objectContaining({ status: 401 })
+		);
 	});
 });

@@ -28,6 +28,8 @@ describe('strategyFor', () => {
 	it('ログイン・登録のPOSTはページキャッシュを、ログアウトは会員データも消す', () => {
 		expect(strategyFor(req('/login', 'POST'), origin, precached)).toBe('clear-pages');
 		expect(strategyFor(req('/register', 'POST'), origin, precached)).toBe('clear-pages');
+		expect(strategyFor(req('/api/passkey/login', 'POST'), origin, precached)).toBe('clear-pages');
+		expect(strategyFor(req('/api/passkey/register/verify', 'POST'), origin, precached)).toBe('clear-pages');
 		expect(strategyFor(req('/logout', 'POST'), origin, precached)).toBe('logout');
 	});
 

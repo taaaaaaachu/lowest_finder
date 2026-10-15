@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { createDb, type Db } from './db';
-import { invites } from './db/schema';
+import { invites, users, passkeys } from './db/schema';
 import { eq } from 'drizzle-orm';
 import {
 	countUsers,
@@ -10,7 +10,8 @@ import {
 	inviteState,
 	revokeInvite,
 	deleteInvite,
-	registerUser
+	registerUser,
+	precheckRegistration
 } from './invites';
 
 let db: Db;
@@ -177,5 +178,48 @@ describe('招待コードによる登録', () => {
 		const inv = createInvite(db, owner.id, null);
 		const row = db.select().from(invites).where(eq(invites.code, inv.code)).get();
 		expect(row?.createdBy).toBe(owner.id);
+	});
+});
+
+describe('パスキーでの登録', () => {
+	const passkey = { id: 'cred-1', publicKey: Buffer.from([1]), counter: 0, transports: null, name: 'iPhone', createdAt: 0 };
+
+	it('パスワードなし・パスキーありで登録でき、指定 id のユーザーにパスキーが付く', () => {
+		const owner = bootstrapUser();
+		const inv = createInvite(db, owner.id, null);
+		const r = registerUser(db, {
+			id: 'fixed-id',
+			username: 'pk',
+			passwordHash: null,
+			passkey,
+			requireInvite: true,
+			inviteCode: inv.code,
+			role: 'user'
+		});
+		expect(r.ok).toBe(true);
+		expect(db.select().from(users).where(eq(users.id, 'fixed-id')).get()?.passwordHash).toBeNull();
+		expect(db.select().from(passkeys).all().map((p) => [p.id, p.userId])).toEqual([['cred-1', 'fixed-id']]);
+	});
+
+	it('招待が不正なら、パスキーも保存されない', () => {
+		bootstrapUser();
+		const r = registerUser(db, { username: 'pk', passwordHash: null, passkey, requireInvite: true, inviteCode: 'nope', role: 'user' });
+		expect(r).toEqual({ ok: false, error: 'invite_invalid' });
+		expect(db.select().from(passkeys).all()).toHaveLength(0);
+	});
+
+	it('パスワードもパスキーも無い登録は例外', () => {
+		expect(() => registerUser(db, { username: 'x', passwordHash: null, requireInvite: false, role: 'super_admin' })).toThrow();
+	});
+});
+
+describe('precheckRegistration', () => {
+	it('招待の不備とユーザー名重複を事前に返し、問題なければ null', () => {
+		const owner = bootstrapUser('owner');
+		const inv = createInvite(db, owner.id, null);
+		expect(precheckRegistration(db, { username: 'new', requireInvite: true, inviteCode: 'nope' })).toBe('invite_invalid');
+		expect(precheckRegistration(db, { username: 'owner', requireInvite: true, inviteCode: inv.code })).toBe('username_taken');
+		expect(precheckRegistration(db, { username: 'new', requireInvite: true, inviteCode: inv.code })).toBeNull();
+		expect(precheckRegistration(db, { username: 'new', requireInvite: false })).toBeNull();
 	});
 });
