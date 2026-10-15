@@ -82,3 +82,7 @@ push/PR ─▶ GitHub Actions(check/test)
 - **ベストエフォート**です。Amazon は bot 対策で価格を取得できないことが多く、ヨドバシや他サイトも HTML 構造の変更で壊れることがあります。取得できない場合は**価格を手入力**してください。
 - 取得対象は**価格(取れれば商品名)のみ**。内容量は常に手入力です。
 - 会員限定機能です(SSRF 等の悪用面を絞るため。詳細は [ADR 0002](./docs/adr/0002-guest-client-only-scraping-member-only.md))。
+
+## ライセンス
+
+[MIT](./LICENSE)
