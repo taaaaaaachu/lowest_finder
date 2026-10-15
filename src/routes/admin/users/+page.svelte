@@ -79,12 +79,13 @@
 	}
 
 	async function resetPassword(u: AdminUser) {
-		const pw = prompt(`${u.username} の新しいパスワード(8文字以上)を入力`);
+		const pw = prompt(`${u.username} の新しいパスワード(8文字以上)を入力
+登録済みのパスキーはすべて削除されます。`);
 		if (pw === null) return;
 		error = null;
 		try {
 			await resetUserPassword(u.id, pw);
-			notice = `${u.username} のパスワードを変更しました(対象は再ログインが必要)。`;
+			notice = `${u.username} のパスワードを変更し、パスキーを削除しました(対象は再ログインが必要)。`;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'パスワード変更に失敗しました。';
 		}
