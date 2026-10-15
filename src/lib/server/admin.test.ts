@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { eq } from 'drizzle-orm';
 import { createDb, type Db } from './db';
-import { users, sessions, type Role } from './db/schema';
+import { users, sessions, passkeys, type Role } from './db/schema';
 import {
 	countSuperAdmins,
 	listUsers,
@@ -109,6 +109,17 @@ describe('resetUserPassword', () => {
 		expect(resetUserPassword(db, actor(sa, 'super_admin'), u, 'newhash')).toEqual({ ok: true });
 		expect(db.select().from(users).where(eq(users.id, u)).get()?.passwordHash).toBe('newhash');
 		expect(db.select().from(sessions).where(eq(sessions.userId, u)).all()).toHaveLength(0);
+	});
+
+	it('管理者リセットで対象の全パスキーも消える(認証情報の全初期化)', () => {
+		const sa = addUser('sa', 'super_admin');
+		const u = addUser('u', 'user');
+		const pk = { publicKey: Buffer.from([1]), counter: 0, name: 'p', createdAt: 0 };
+		db.insert(passkeys).values({ ...pk, id: 'pk-u', userId: u }).run();
+		db.insert(passkeys).values({ ...pk, id: 'pk-sa', userId: sa }).run();
+
+		expect(resetUserPassword(db, actor(sa, 'super_admin'), u, 'newhash')).toEqual({ ok: true });
+		expect(db.select().from(passkeys).all().map((p) => p.id)).toEqual(['pk-sa']);
 	});
 
 	it('admin は他の admin のパスワードをリセットできない', () => {

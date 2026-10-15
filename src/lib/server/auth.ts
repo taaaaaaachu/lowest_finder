@@ -7,6 +7,13 @@ import { users, sessions, type UserRow } from './db/schema';
 export const SESSION_COOKIE = 'session';
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30日
 const SESSION_RENEW_THRESHOLD_MS = 1000 * 60 * 60 * 24 * 15; // 残り15日を切ったら延長
+/** 認証情報の変更を許す、直近の本人確認(ログイン・再認証)からの猶予。 */
+export const RECENT_AUTH_MS = 1000 * 60 * 5;
+
+/** verifiedAt が直近の本人確認とみなせるか。 */
+export function isRecentlyVerified(verifiedAt: number | null, now = Date.now()): boolean {
+	return verifiedAt !== null && now - verifiedAt < RECENT_AUTH_MS;
+}
 
 // argon2 パラメータ(OWASP 推奨相当)。
 const ARGON2_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1 } as const;
@@ -53,6 +60,7 @@ export async function verifyCredentials(
 
 export interface SessionValidation {
 	user: Pick<UserRow, 'id' | 'username' | 'role'>;
+	session: { id: string; verifiedAt: number | null };
 	/** Cookie の有効期限を更新すべき場合の新しい期限(延長時のみ)。 */
 	renewedExpiresAt: number | null;
 }
@@ -61,7 +69,8 @@ export interface SessionValidation {
 export function createSession(userId: string): { token: string; expiresAt: number } {
 	const token = randomBytes(32).toString('hex');
 	const expiresAt = Date.now() + SESSION_TTL_MS;
-	db.insert(sessions).values({ id: hashToken(token), userId, expiresAt }).run();
+	// ログイン直後は本人確認済みとして扱う(すぐパスキーを追加できるように)。
+	db.insert(sessions).values({ id: hashToken(token), userId, expiresAt, verifiedAt: Date.now() }).run();
 	return { token, expiresAt };
 }
 
@@ -92,7 +101,12 @@ export function validateSessionToken(token: string): SessionValidation | null {
 		db.update(sessions).set({ expiresAt: renewedExpiresAt }).where(eq(sessions.id, id)).run();
 	}
 
-	return { user, renewedExpiresAt };
+	return { user, session: { id, verifiedAt: row.verifiedAt }, renewedExpiresAt };
+}
+
+/** セッションを本人確認済みにする(再認証の成功時)。 */
+export function markSessionVerified(sessionId: string): void {
+	db.update(sessions).set({ verifiedAt: Date.now() }).where(eq(sessions.id, sessionId)).run();
 }
 
 /** セッションを無効化する(ログアウト)。 */

@@ -1,6 +1,6 @@
 import { and, eq, ne, asc } from 'drizzle-orm';
 import type { Db } from './db';
-import { users, sessions, type Role } from './db/schema';
+import { users, sessions, passkeys, type Role } from './db/schema';
 import { canDeleteUser, canResetPassword, canSetRole } from '$lib/rbac';
 
 export interface Actor {
@@ -38,7 +38,7 @@ export function listUsers(db: Db): AdminUser[] {
 }
 
 /** 指定ユーザーのセッションを削除する。keepSessionId を渡すとその1件だけ残す。 */
-function deleteUserSessions(db: Db, userId: string, keepSessionId?: string): void {
+export function deleteUserSessions(db: Db, userId: string, keepSessionId?: string): void {
 	if (keepSessionId) {
 		db.delete(sessions)
 			.where(and(eq(sessions.userId, userId), ne(sessions.id, keepSessionId)))
@@ -83,7 +83,10 @@ export function deleteUser(db: Db, actor: Actor, targetId: string): AdminResult 
 	return { ok: true };
 }
 
-/** 管理者による他人のパスワードリセット。対象者の全セッションを無効化する。 */
+/**
+ * 管理者による他人のパスワードリセット(認証情報の全初期化)。
+ * 新パスワードを設定し、対象者の全パスキーと全セッションを削除する(docs/adr/0006)。
+ */
 export function resetUserPassword(
 	db: Db,
 	actor: Actor,
@@ -94,8 +97,11 @@ export function resetUserPassword(
 	if (!target) return { ok: false, error: 'not_found' };
 	if (!canResetPassword(actor.role, target.role)) return { ok: false, error: 'forbidden' };
 
-	db.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, targetId)).run();
-	deleteUserSessions(db, targetId);
+	db.transaction((tx) => {
+		tx.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, targetId)).run();
+		tx.delete(passkeys).where(eq(passkeys.userId, targetId)).run();
+		tx.delete(sessions).where(eq(sessions.userId, targetId)).run();
+	});
 	return { ok: true };
 }
 

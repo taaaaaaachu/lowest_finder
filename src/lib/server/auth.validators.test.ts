@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hash, verify } from '@node-rs/argon2';
-import { validateUsername, validatePassword } from './auth';
+import { validateUsername, validatePassword, isRecentlyVerified, RECENT_AUTH_MS } from './auth';
 
 describe('validateUsername', () => {
 	it('3〜32文字の英数字と _ . - を許可', () => {
@@ -39,5 +39,14 @@ describe('argon2 ハッシュ', () => {
 		});
 		expect(await verify(h, 'correct horse battery')).toBe(true);
 		expect(await verify(h, 'wrong password')).toBe(false);
+	});
+});
+
+describe('isRecentlyVerified', () => {
+	it('猶予内なら true、猶予切れ・未確認なら false', () => {
+		const now = 1_000_000_000;
+		expect(isRecentlyVerified(now - RECENT_AUTH_MS + 1, now)).toBe(true);
+		expect(isRecentlyVerified(now - RECENT_AUTH_MS, now)).toBe(false);
+		expect(isRecentlyVerified(null, now)).toBe(false);
 	});
 });

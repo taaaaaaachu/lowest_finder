@@ -20,11 +20,13 @@ function cookieOpts(expires: Date) {
 export const handle: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get(SESSION_COOKIE);
 	event.locals.user = null;
+	event.locals.session = null;
 
 	if (token) {
 		const result = validateSessionToken(token);
 		if (result) {
 			event.locals.user = result.user;
+			event.locals.session = result.session;
 			// スライディング延長された場合は Cookie の期限も更新。
 			if (result.renewedExpiresAt) {
 				event.cookies.set(SESSION_COOKIE, token, cookieOpts(new Date(result.renewedExpiresAt)));
