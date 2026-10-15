@@ -1,13 +1,17 @@
-import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index, blob } from 'drizzle-orm/sqlite-core';
 
 import type { Role } from '$lib/rbac';
 export type { Role };
 
-/** 会員ユーザー。ログインIDはユーザー名(メールは使わない)。 */
+/**
+ * 会員ユーザー。ログインIDはユーザー名(メールは使わない)。
+ * パスワードとパスキーのどちらか一方は必ず持つ(アプリ側で保証。docs/adr/0006)。
+ */
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey(),
 	username: text('username').notNull().unique(),
-	passwordHash: text('password_hash').notNull(),
+	/** null = パスワードなし(パスキーのみの会員)。 */
+	passwordHash: text('password_hash'),
 	/** 役割。既定は user。最初に登録したユーザーは super_admin。 */
 	role: text('role').notNull().$type<Role>().default('user'),
 	createdAt: integer('created_at').notNull()
@@ -22,8 +26,29 @@ export const sessions = sqliteTable('sessions', {
 	userId: text('user_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
-	expiresAt: integer('expires_at').notNull()
+	expiresAt: integer('expires_at').notNull(),
+	/** 最後に本人確認(ログイン・再認証)した日時。認証情報の変更に直近の確認を求める。 */
+	verifiedAt: integer('verified_at')
 });
+
+/** パスキー(WebAuthn 認証情報)。id はクレデンシャルID(base64url)。 */
+export const passkeys = sqliteTable(
+	'passkeys',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		publicKey: blob('public_key', { mode: 'buffer' }).notNull(),
+		counter: integer('counter').notNull(),
+		/** AuthenticatorTransport の JSON 配列。 */
+		transports: text('transports'),
+		name: text('name').notNull(),
+		createdAt: integer('created_at').notNull(),
+		lastUsedAt: integer('last_used_at')
+	},
+	(t) => [index('passkeys_user_idx').on(t.userId)]
+);
 
 /** 会員のグループ。ゲストの Group と同じ概念を DB に永続化したもの。 */
 export const groups = sqliteTable(
@@ -81,6 +106,7 @@ export const invites = sqliteTable(
 
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
+export type PasskeyRow = typeof passkeys.$inferSelect;
 // Role 型は上部で定義済み(users.role の $type に使用)。
 export type InviteRow = typeof invites.$inferSelect;
 export type GroupRow = typeof groups.$inferSelect;

@@ -22,6 +22,13 @@
       "when": 1784188316570,
       "tag": "0002_crazy_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792077314162,
+      "tag": "0003_furry_master_chief",
+      "breakpoints": true
     }
   ]
 }

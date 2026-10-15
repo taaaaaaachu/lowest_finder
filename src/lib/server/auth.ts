@@ -41,8 +41,9 @@ export async function verifyCredentials(
 	password: string
 ): Promise<UserRow | null> {
 	const user = db.select().from(users).where(eq(users.username, username.trim())).get();
-	if (!user) {
-		// ユーザー不在でも一定のハッシュ計算を行い、存在有無をタイミングで漏らさない。
+	if (!user?.passwordHash) {
+		// ユーザー不在・パスワードなし(パスキーのみ)でも一定のハッシュ計算を行い、
+		// 存在有無やパスワードの有無をタイミングで漏らさない。
 		await hash(password, ARGON2_OPTS).catch(() => undefined);
 		return null;
 	}
