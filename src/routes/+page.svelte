@@ -317,7 +317,7 @@
 				onclick={handleScrapeAll}
 				disabled={scrapingId !== null}
 			>
-				URLのある商品の価格をまとめて取得
+				一括価格取得
 			</button>
 		{/if}
 
