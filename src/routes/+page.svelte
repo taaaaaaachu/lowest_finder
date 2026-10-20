@@ -5,6 +5,7 @@
 	import { IndexedDbRepository } from '$lib/repo/indexeddb';
 	import { MemberRepository } from '$lib/repo/member';
 	import { scrapeUrl } from '$lib/repo/api';
+	import { scrapeSequentially } from '$lib/scrapeAll';
 	import type { Item } from '$lib/types';
 	import type { ItemInput, Snapshot } from '$lib/repo/types';
 	import ItemForm from '$lib/components/ItemForm.svelte';
@@ -133,23 +134,55 @@
 	// 価格取得中のアイテムID
 	let scrapingId = $state<string | null>(null);
 
+	// 1件取得して価格を更新する。取得できなければ例外を投げる。
+	async function scrapeAndApply(item: Item) {
+		const res = await scrapeUrl(item.url!);
+		if (res.price === null) {
+			throw new Error('このページから価格を取得できませんでした。手入力で価格を更新してください。');
+		}
+		await app.updateItem(item.id, { price: res.price, lastFetchedAt: Date.now() });
+	}
+
 	async function handleScrape(item: Item) {
 		if (!item.url) return;
 		scrapingId = item.id;
 		app.error = null;
 		try {
-			const res = await scrapeUrl(item.url);
-			if (res.price === null) {
-				app.error =
-					'このページから価格を取得できませんでした。手入力で価格を更新してください。';
-				return;
-			}
-			await app.updateItem(item.id, { price: res.price, lastFetchedAt: Date.now() });
+			await scrapeAndApply(item);
 		} catch (e) {
 			app.error = e instanceof Error ? e.message : '価格の取得に失敗しました。';
 		} finally {
 			scrapingId = null;
 		}
+	}
+
+	// グループ内一括取得の進捗(null なら非実行)。
+	let bulk = $state<{ done: number; total: number; cancelled: boolean } | null>(null);
+
+	async function handleScrapeAll() {
+		const targets = app.sortedItems.filter((i) => i.url);
+		if (targets.length === 0) return;
+		bulk = { done: 0, total: targets.length, cancelled: false };
+		// 画面を離れて別の一括取得が始まっても混ざらないよう、この実行の状態を掴んでおく。
+		const run = bulk;
+		app.error = null;
+		try {
+			const failed = await scrapeSequentially(
+				targets,
+				scrapeAndApply,
+				(done) => (run.done = done),
+				() => run.cancelled
+			);
+			if (failed.length > 0) {
+				app.error = `${failed.length}件の価格を取得できませんでした: ${failed.map((i) => i.name || '(名前なし)').join('、')}`;
+			}
+		} finally {
+			if (bulk === run) bulk = null;
+		}
+	}
+
+	function cancelScrapeAll() {
+		if (bulk) bulk.cancelled = true;
 	}
 
 	async function handleDeleteGroup() {
@@ -185,6 +218,8 @@
 	}
 
 	function backToList() {
+		cancelScrapeAll();
+		bulk = null;
 		app.selectedGroupId = null;
 		app.items = [];
 		editingItem = null;
@@ -267,12 +302,31 @@
 			単価の安い順に並びます。単位はこのグループ内で揃えてください(単位変換はしません)。
 		</p>
 
+		{#if bulk}
+			<div class="bulk card">
+				<progress max={bulk.total} value={bulk.done}></progress>
+				<span>価格取得中… {bulk.done} / {bulk.total}</span>
+				<button type="button" onclick={cancelScrapeAll} disabled={bulk.cancelled}>
+					{bulk.cancelled ? '中止中…' : '中止'}
+				</button>
+			</div>
+		{:else if user && !app.offline && app.items.some((i) => i.url)}
+			<button
+				type="button"
+				class="scrape-all"
+				onclick={handleScrapeAll}
+				disabled={scrapingId !== null}
+			>
+				URLのある商品の価格をまとめて取得
+			</button>
+		{/if}
+
 		<ItemTable
 			items={app.sortedItems}
 			unitLabel={g.unitLabel}
 			onedit={(item) => (editingItem = item)}
 			ondelete={handleDeleteItem}
-			onscrape={user && !app.offline ? handleScrape : undefined}
+			onscrape={user && !app.offline && !bulk ? handleScrape : undefined}
 			{scrapingId}
 			{editingItem}
 			onsubmitEdit={handleUpdateItem}
@@ -398,6 +452,25 @@
 	.edit-actions {
 		display: flex;
 		gap: 0.5rem;
+	}
+
+	.bulk {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.6rem 0.75rem;
+		margin-bottom: 1rem;
+		font-size: 0.85rem;
+	}
+
+	.bulk progress {
+		flex: 1;
+		min-width: 0;
+		accent-color: var(--primary);
+	}
+
+	.scrape-all {
+		margin-bottom: 1rem;
 	}
 
 	.groups {
