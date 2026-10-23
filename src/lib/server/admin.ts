@@ -1,6 +1,6 @@
-import { and, eq, ne, asc } from 'drizzle-orm';
+import { and, eq, ne, gt, asc } from 'drizzle-orm';
 import type { Db } from './db';
-import { users, sessions, passkeys, type Role } from './db/schema';
+import { users, sessions, passkeys, resetLinks, type Role } from './db/schema';
 import { canDeleteUser, canResetPassword, canSetRole } from '$lib/rbac';
 
 export interface Actor {
@@ -13,6 +13,8 @@ export interface AdminUser {
 	username: string;
 	role: Role;
 	createdAt: number;
+	/** 未使用で期限内のリセットリンクの期限。無ければ null。 */
+	resetLinkExpiresAt: number | null;
 }
 
 export type AdminError = 'not_found' | 'forbidden' | 'last_super_admin';
@@ -24,15 +26,17 @@ export function countSuperAdmins(db: Db): number {
 }
 
 /** 全ユーザーを作成順に返す(管理画面用)。 */
-export function listUsers(db: Db): AdminUser[] {
+export function listUsers(db: Db, now = Date.now()): AdminUser[] {
 	return db
 		.select({
 			id: users.id,
 			username: users.username,
 			role: users.role,
-			createdAt: users.createdAt
+			createdAt: users.createdAt,
+			resetLinkExpiresAt: resetLinks.expiresAt
 		})
 		.from(users)
+		.leftJoin(resetLinks, and(eq(resetLinks.userId, users.id), gt(resetLinks.expiresAt, now)))
 		.orderBy(asc(users.createdAt))
 		.all();
 }
@@ -83,6 +87,15 @@ export function deleteUser(db: Db, actor: Actor, targetId: string): AdminResult 
 	return { ok: true };
 }
 
+/** actor が targetId の会員をパスワードリセット(仮パスワード・リセットリンク)の対象にできないなら、その理由。 */
+export function resetTargetError(db: Db, actor: Actor, targetId: string): AdminError | null {
+	const target = db.select({ role: users.role }).from(users).where(eq(users.id, targetId)).get();
+	if (!target) return 'not_found';
+	// 自分の認証情報はアカウント画面で変える(docs/adr/0007)。
+	if (actor.id === targetId || !canResetPassword(actor.role, target.role)) return 'forbidden';
+	return null;
+}
+
 /**
  * 管理者による他人のパスワードリセット(認証情報の全初期化)。
  * 新パスワードを設定し、対象者の全パスキーと全セッションを削除する(docs/adr/0006)。
@@ -93,12 +106,8 @@ export function resetUserPassword(
 	targetId: string,
 	newPasswordHash: string
 ): AdminResult {
-	const target = db.select().from(users).where(eq(users.id, targetId)).get();
-	if (!target) return { ok: false, error: 'not_found' };
-	// 自分の認証情報はアカウント画面で変える(docs/adr/0007)。
-	if (actor.id === targetId || !canResetPassword(actor.role, target.role)) {
-		return { ok: false, error: 'forbidden' };
-	}
+	const err = resetTargetError(db, actor, targetId);
+	if (err) return { ok: false, error: err };
 
 	db.transaction((tx) => {
 		// 管理者が知っているパスワードなので仮パスワードにする(本人が変えるまで他の操作は不可)。
@@ -108,6 +117,8 @@ export function resetUserPassword(
 			.run();
 		tx.delete(passkeys).where(eq(passkeys.userId, targetId)).run();
 		tx.delete(sessions).where(eq(sessions.userId, targetId)).run();
+		// 未使用のリセットリンクも使えなくする。
+		tx.delete(resetLinks).where(eq(resetLinks.userId, targetId)).run();
 	});
 	return { ok: true };
 }

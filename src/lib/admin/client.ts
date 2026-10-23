@@ -75,6 +75,8 @@ export interface AdminUser {
 	username: string;
 	role: Role;
 	createdAt: number;
+	/** 未使用で期限内のリセットリンクの期限。無ければ null。 */
+	resetLinkExpiresAt: number | null;
 }
 
 export function listUsers(): Promise<AdminUser[]> {
@@ -94,6 +96,15 @@ export function resetUserPassword(id: string, newPassword: string): Promise<{ ok
 		method: 'POST',
 		body: JSON.stringify({ newPassword })
 	});
+}
+
+/** リセットリンクを発行する。URL はこの応答でしか得られない。 */
+export function issueResetLink(id: string): Promise<{ url: string; expiresAt: number }> {
+	return api(`/api/users/${id}/reset-link`, { method: 'POST' });
+}
+
+export function revokeResetLink(id: string): Promise<{ ok: true }> {
+	return api(`/api/users/${id}/reset-link`, { method: 'DELETE' });
 }
 
 // --- 自分のアカウント ---
@@ -127,11 +138,17 @@ export async function loginWithPasskey(useBrowserAutofill = false): Promise<void
 	await api('/api/passkey/login', { method: 'POST', body: JSON.stringify({ response }) });
 }
 
-/** パスキーを作って登録する。未ログインなら signup(ユーザー名+招待)で会員登録になる。 */
-async function registerPasskey(name: string, signup?: { username: string; invite: string }) {
+/**
+ * パスキーを作って登録する。start が signup(ユーザー名+招待)なら会員登録、
+ * resetToken ならリセットリンクでの再設定、省けばログイン中の会員への追加。
+ */
+async function registerPasskey(
+	name: string,
+	start: { username: string; invite: string } | { resetToken: string } | object = {}
+) {
 	const optionsJSON = await api<Parameters<typeof startRegistration>[0]['optionsJSON']>(
 		'/api/passkey/register/options',
-		{ method: 'POST', body: JSON.stringify(signup ?? {}) }
+		{ method: 'POST', body: JSON.stringify(start) }
 	);
 	const response = await startRegistration({ optionsJSON });
 	await api('/api/passkey/register/verify', {
@@ -146,6 +163,11 @@ export function signupWithPasskey(username: string, invite: string): Promise<voi
 
 export function addPasskey(name: string): Promise<void> {
 	return registerPasskey(name);
+}
+
+/** リセットリンクでパスキーを登録し、そのままログインする。 */
+export function resetWithPasskey(resetToken: string, name: string): Promise<void> {
+	return registerPasskey(name, { resetToken });
 }
 
 export function renamePasskey(id: string, name: string): Promise<{ ok: true }> {

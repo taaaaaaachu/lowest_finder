@@ -22,10 +22,14 @@ import { getPasskey, recordPasskeyUse } from './credentials';
 const RP_NAME = 'Lowest Finder';
 const CHALLENGE_TTL_MS = 1000 * 60 * 5;
 
-/** 登録の待ち状態。signup = 未登録者の会員登録、add = ログイン中の会員のパスキー追加。 */
+/**
+ * 登録の待ち状態。signup = 未登録者の会員登録、add = ログイン中の会員のパスキー追加、
+ * reset = リセットリンクでの再設定。
+ */
 export type RegistrationPending =
 	| { kind: 'signup'; userId: string; username: string; inviteCode: string }
-	| { kind: 'add'; userId: string };
+	| { kind: 'add'; userId: string }
+	| { kind: 'reset'; token: string };
 
 type Purpose = 'reg' | 'auth';
 interface Stored {

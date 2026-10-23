@@ -5,6 +5,7 @@ import { setSessionCookie } from '$lib/server/sessionCookie';
 import { requireRecentAuth } from '$lib/server/apiGuard';
 import { addPasskey, normalizePasskeyName } from '$lib/server/credentials';
 import { countUsers, registerUser, REGISTER_ERROR_MESSAGES } from '$lib/server/invites';
+import { consumeResetLink } from '$lib/server/resetLinks';
 import { takeChallenge, verifyRegistration } from '$lib/server/webauthn';
 import type { RequestHandler } from './$types';
 
@@ -21,6 +22,19 @@ export const POST: RequestHandler = async ({ locals, request, cookies, url }) =>
 	const cred = await verifyRegistration(url, body?.response, stored.challenge);
 	if (!cred) throw error(400, 'パスキーを確認できませんでした。');
 	const passkey = { ...cred, name, createdAt: Date.now() };
+
+	if (pending.kind === 'reset') {
+		let userId: string | null;
+		try {
+			userId = consumeResetLink(db, pending.token, { passkey });
+		} catch {
+			throw error(409, 'このパスキーは登録済みです。');
+		}
+		if (!userId) throw error(410, 'このリンクは使えません。管理者に再発行を依頼してください。');
+		const { token, expiresAt } = createSession(userId);
+		setSessionCookie(cookies, token, expiresAt);
+		return json({ ok: true });
+	}
 
 	if (pending.kind === 'add') {
 		const user = requireRecentAuth(locals);

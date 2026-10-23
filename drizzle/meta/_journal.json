@@ -36,6 +36,13 @@
       "when": 1792777938098,
       "tag": "0004_temporary_password",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792778067358,
+      "tag": "0005_reset_links",
+      "breakpoints": true
     }
   ]
 }
