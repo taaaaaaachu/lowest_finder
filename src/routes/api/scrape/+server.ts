@@ -1,7 +1,7 @@
-import { json, error } from '@sveltejs/kit';
-import { requireUser } from '$lib/server/apiGuard';
-import { scrapePrice, SsrfError, FetchError } from '$lib/server/scrape';
-import { rateLimit } from '$lib/server/rateLimit';
+import { error } from '@sveltejs/kit';
+import { requireUser } from '#lib/server/apiGuard.js';
+import { scrapePrice, SsrfError, FetchError } from '#lib/server/scrape/index.js';
+import { rateLimit } from '#lib/server/rateLimit.js';
 import type { RequestHandler } from './$types';
 
 /** 価格取得(会員限定)。POST { url } → { price, name, adapter }。 */
@@ -22,9 +22,9 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		const result = await scrapePrice(url);
 		if (result.price === null) {
 			// 取得はできたが価格を特定できなかった(手入力フォールバックへ)。
-			return json({ price: null, name: result.name, adapter: result.adapter }, { status: 200 });
+			return Response.json({ price: null, name: result.name, adapter: result.adapter }, { status: 200 });
 		}
-		return json(result);
+		return Response.json(result);
 	} catch (e) {
 		if (e instanceof SsrfError) throw error(400, e.message);
 		if (e instanceof FetchError) throw error(502, e.message);

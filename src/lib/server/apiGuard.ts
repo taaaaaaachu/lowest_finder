@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { canAccessAdmin } from '$lib/rbac';
+import { canAccessAdmin } from '#lib/rbac.js';
 import { isRecentlyVerified } from './auth';
 
 type SessionUser = NonNullable<App.Locals['user']>;

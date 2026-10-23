@@ -1,22 +1,25 @@
-/// <reference types="@sveltejs/kit" />
-/// <reference lib="webworker" />
-
-import { build, files, version } from '$service-worker';
-import { strategyFor } from '$lib/sw/strategy';
-import { MEMBER_DB_PREFIX } from '$lib/repo/member';
+import { self as sw } from '$app/service-worker';
+import { version } from '$app/env';
+import { immutable, assets } from '$app/manifest';
+import { asset } from '$app/paths';
+import { strategyFor } from '#lib/sw/strategy.js';
+import { MEMBER_DB_PREFIX } from '#lib/repo/member.js';
 
 // アプリ本体(ビルド成果物・静的ファイル)をプリキャッシュし、オフラインでも起動できるようにする。
 // 画面遷移の HTML は network-first で保存する。HTML にはユーザー情報が埋め込まれるため、
 // 認証状態が変わる POST でページキャッシュを消す。API レスポンスは保存しない。
-
-const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const CACHE_PREFIX = 'lowest-finder-';
 // 版ごとに分ける。古い HTML が消えた旧アセットを参照しないよう、ページも版ごと。
 const ASSET_CACHE = `${CACHE_PREFIX}assets-${version}`;
 const PAGE_CACHE = `${CACHE_PREFIX}pages-${version}`;
 const OFFLINE_URL = '/offline.html';
-const PRECACHED = new Set([...build, ...files]);
+// マニフェストのパスはベースパス相対なので、url.pathname と同じ形(先頭 / 付き)にそろえる。
+// ビルド成果物は SW 自身(ベースパス直下)からの相対で解決する。
+const PRECACHED = new Set([
+	...immutable.map((f) => new URL(f.path, sw.location.href).pathname),
+	...assets.map((f) => asset(f.path))
+]);
 // 旧SWがSvelteKitの数値versionで作ったキャッシュ。認証済みHTMLを含み得るため移行時に破棄する。
 const LEGACY_ASSET_CACHE = /^cache-\d+$/;
 // 旧版の会員データ閲覧キャッシュ。ユーザー共通のDB名だったため破棄する。

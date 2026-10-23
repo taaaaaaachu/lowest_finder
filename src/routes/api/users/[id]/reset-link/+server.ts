@@ -1,8 +1,8 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import type { AdminError, Actor } from '$lib/server/admin';
-import { issueResetLink, revokeResetLink } from '$lib/server/resetLinks';
-import { requireAdmin } from '$lib/server/apiGuard';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import type { AdminError, Actor } from '#lib/server/admin.js';
+import { issueResetLink, revokeResetLink } from '#lib/server/resetLinks.js';
+import { requireAdmin } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
 
 const STATUS: Record<AdminError, number> = { not_found: 404, forbidden: 403, last_super_admin: 409 };
@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ locals, params, url }) => {
 	const actor: Actor = { id: user.id, role: user.role };
 	const result = issueResetLink(db, actor, params.id);
 	if (!result.ok) throw error(STATUS[result.error], 'リセットリンクを発行できませんでした。');
-	return json({ url: `${url.origin}/reset/${result.token}`, expiresAt: result.expiresAt });
+	return Response.json({ url: `${url.origin}/reset/${result.token}`, expiresAt: result.expiresAt });
 };
 
 /** 未使用のリセットリンクの取り消し。 */
@@ -22,5 +22,5 @@ export const DELETE: RequestHandler = async ({ locals, params }) => {
 	const actor: Actor = { id: user.id, role: user.role };
 	const result = revokeResetLink(db, actor, params.id);
 	if (!result.ok) throw error(STATUS[result.error], 'リセットリンクを取り消せませんでした。');
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

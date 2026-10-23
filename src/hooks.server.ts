@@ -1,11 +1,7 @@
-import { json, type Handle } from '@sveltejs/kit';
-import {
-	SESSION_COOKIE,
-	validateSessionToken,
-	invalidateSession
-} from '$lib/server/auth';
-import { dev } from '$app/environment';
-import { allowedWithTemporaryPassword } from '$lib/server/apiGuard';
+import type { Handle } from '@sveltejs/kit/hooks';
+import { SESSION_COOKIE, validateSessionToken, invalidateSession } from '#lib/server/auth.js';
+import { dev } from '$app/env';
+import { allowedWithTemporaryPassword } from '#lib/server/apiGuard.js';
 
 /** Cookie の共通属性。HTTPS 前提(Cloudflare Tunnel)なので Secure を付ける。 */
 function cookieOpts(expires: Date) {
@@ -46,7 +42,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		path.startsWith('/api/') &&
 		!allowedWithTemporaryPassword(path)
 	) {
-		return json({ message: 'パスワードの変更が必要です。' }, { status: 403 });
+		return Response.json({ message: 'パスワードの変更が必要です。' }, { status: 403 });
 	}
 
 	return resolve(event);

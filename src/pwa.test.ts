@@ -27,7 +27,7 @@ const projectText = (path: string) => projectFile(path).toString('utf8');
 
 const manifest = JSON.parse(projectText('static/manifest.webmanifest')) as WebAppManifest;
 const appTemplate = projectText('src/app.html');
-const serviceWorker = projectText('src/service-worker.ts');
+const serviceWorker = projectText('src/service-worker/index.ts');
 const rootLayout = projectText('src/routes/+layout.svelte');
 const viteConfig = projectText('vite.config.ts');
 const offlinePage = projectText('static/offline.html');
@@ -84,7 +84,8 @@ describe('Android WebAPK向けPWA', () => {
 
 	it('アプリ本体をプリキャッシュし、認証状態が変わるとページキャッシュを消す', () => {
 		expect(serviceWorker).toContain("const OFFLINE_URL = '/offline.html'");
-		expect(serviceWorker).toContain("import { build, files, version } from '$service-worker'");
+		expect(serviceWorker).toContain("import { immutable, assets } from '$app/manifest'");
+		expect(serviceWorker).toContain("import { version } from '$app/env'");
 		expect(serviceWorker).toContain('strategyFor(event.request');
 		expect(serviceWorker).toContain('caches.delete(PAGE_CACHE)');
 		expect(serviceWorker).toContain('deleteMemberDbs()');
@@ -97,9 +98,9 @@ describe('Android WebAPK向けPWA', () => {
 
 	it('自動登録を無効化し、ビルドversion付きURLで一元登録する', () => {
 		expect(viteConfig).toMatch(/serviceWorker:\s*{\s*[^}]*register:\s*false/s);
-		expect(rootLayout).toContain("import { version } from '$app/environment'");
+		expect(rootLayout).toContain("import { version } from '$app/env'");
 		expect(rootLayout).toMatch(
-			/\.register\(`\/service-worker\.js\?v=\$\{encodeURIComponent\(version\)\}`,\s*{[^}]*scope:\s*['"]\/['"][^}]*updateViaCache:\s*['"]none['"]/s
+			/\.register\(`\/service-worker\.js\?v=\$\{encodeURIComponent\(version\)\}`,\s*{[^}]*scope:\s*['"]\/['"][^}]*type:\s*['"]module['"][^}]*updateViaCache:\s*['"]none['"]/s
 		);
 	});
 });

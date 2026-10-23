@@ -1,8 +1,8 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { setUserRole, deleteUser, type AdminError, type Actor } from '$lib/server/admin';
-import { requireAdmin } from '$lib/server/apiGuard';
-import type { Role } from '$lib/server/db/schema';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import { setUserRole, deleteUser, type AdminError, type Actor } from '#lib/server/admin.js';
+import { requireAdmin } from '#lib/server/apiGuard.js';
+import type { Role } from '#lib/server/db/schema.js';
 import type { RequestHandler } from './$types';
 
 const STATUS: Record<AdminError, number> = {
@@ -28,7 +28,7 @@ export const PATCH: RequestHandler = async ({ locals, params, request }) => {
 	const actor: Actor = { id: user.id, role: user.role };
 	const result = setUserRole(db, actor, params.id, role);
 	if (!result.ok) throw error(STATUS[result.error], MESSAGE[result.error]);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
 
 /** ユーザー削除。管理者以上。 */
@@ -38,5 +38,5 @@ export const DELETE: RequestHandler = ({ locals, params }) => {
 	const result = deleteUser(db, actor, params.id);
 	if (!result.ok) throw error(STATUS[result.error], MESSAGE[result.error]);
 	// 自分自身を削除した場合はクライアントにログアウト相当を促す。
-	return json({ ok: true, selfDeleted: params.id === user.id });
+	return Response.json({ ok: true, selfDeleted: params.id === user.id });
 };

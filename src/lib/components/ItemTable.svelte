@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Item } from '$lib/types';
-	import type { ItemInput } from '$lib/repo/types';
-	import { unitPrice } from '$lib/domain/unitPrice';
-	import { formatPrice, formatUnitPrice, formatDateTime } from '$lib/format';
+	import type { Item } from '#lib/types.js';
+	import type { ItemInput } from '#lib/repo/types.js';
+	import { unitPrice } from '#lib/domain/unitPrice.js';
+	import { formatPrice, formatUnitPrice, formatDateTime } from '#lib/format.js';
 	import ItemForm from './ItemForm.svelte';
 
 	interface Props {

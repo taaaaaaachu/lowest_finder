@@ -2,8 +2,8 @@ import { and, eq } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import type { Db } from './db';
 import { groups, items } from './db/schema';
-import type { Group, Item } from '$lib/types';
-import type { GroupInput, ItemInput, Snapshot } from '$lib/repo/types';
+import type { Group, Item } from '#lib/types.js';
+import type { GroupInput, ItemInput, Snapshot } from '#lib/repo/types.js';
 
 function newId(): string {
 	return randomBytes(16).toString('hex');

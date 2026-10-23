@@ -11,9 +11,9 @@
 		issueResetLink,
 		revokeResetLink,
 		type AdminUser
-	} from '$lib/admin/client';
-	import { canSetRole, canDeleteUser, canResetPassword, type Role } from '$lib/rbac';
-	import { formatDateTime } from '$lib/format';
+	} from '#lib/admin/client.js';
+	import { canSetRole, canDeleteUser, canResetPassword, type Role } from '#lib/rbac.js';
+	import { formatDateTime } from '#lib/format.js';
 
 	let users = $state<AdminUser[]>([]);
 	let error = $state<string | null>(null);
@@ -76,7 +76,7 @@
 			const res = await deleteUser(u.id);
 			if (res.selfDeleted) {
 				// 自分を消したらセッションも消えている。トップへ。
-				await goto(resolve('/'), { invalidateAll: true });
+				await goto(resolve('/'), { refreshAll: true });
 				return;
 			}
 			notice = `${u.username} を削除しました。`;

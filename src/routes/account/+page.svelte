@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
-	import { formatDateTime } from '$lib/format';
+	import { refreshAll } from '$app/navigation';
+	import { formatDateTime } from '#lib/format.js';
 	import {
 		ApiError,
 		REAUTH_REQUIRED,
@@ -11,7 +11,7 @@
 		removeOwnPassword,
 		renamePasskey,
 		setOwnPassword
-	} from '$lib/admin/client';
+	} from '#lib/admin/client.js';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -34,7 +34,7 @@
 		busy = true;
 		try {
 			await action();
-			await invalidateAll();
+			await refreshAll();
 			notice = done;
 			return true;
 		} catch (err) {

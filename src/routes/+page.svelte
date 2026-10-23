@@ -2,15 +2,15 @@
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { app } from '$lib/stores/app.svelte';
-	import { IndexedDbRepository } from '$lib/repo/indexeddb';
-	import { MemberRepository } from '$lib/repo/member';
-	import { scrapeUrl } from '$lib/repo/api';
-	import { scrapeSequentially } from '$lib/scrapeAll';
-	import type { Item } from '$lib/types';
-	import type { ItemInput, Snapshot } from '$lib/repo/types';
-	import ItemForm from '$lib/components/ItemForm.svelte';
-	import ItemTable from '$lib/components/ItemTable.svelte';
+	import { app } from '#lib/stores/app.svelte.js';
+	import { IndexedDbRepository } from '#lib/repo/indexeddb.js';
+	import { MemberRepository } from '#lib/repo/member.js';
+	import { scrapeUrl } from '#lib/repo/api.js';
+	import { scrapeSequentially } from '#lib/scrapeAll.js';
+	import type { Item } from '#lib/types.js';
+	import type { ItemInput, Snapshot } from '#lib/repo/types.js';
+	import ItemForm from '#lib/components/ItemForm.svelte';
+	import ItemTable from '#lib/components/ItemTable.svelte';
 
 	let ready = $state(false);
 
@@ -55,7 +55,7 @@
 					app.authRequired = s.authRequired;
 					void app.refresh();
 				},
-				onRejected: (message) => (app.error = `サーバーに反映できなかった変更を取り消しました: ${message}`)
+				onRejected: (message) => app.error = `サーバーに反映できなかった変更を取り消しました: ${message}`
 			});
 			await app.setRepository(repo);
 			// 端末のデータが消されにくくする(未送信の変更を守るため)。
@@ -168,12 +168,8 @@
 		const run = bulk;
 		app.error = null;
 		try {
-			const failed = await scrapeSequentially(
-				targets,
-				scrapeAndApply,
-				(done) => (run.done = done),
-				() => run.cancelled
-			);
+			const failed = await scrapeSequentially(targets, scrapeAndApply, (done) => run.done = done, () => run.cancelled);
+
 			if (failed.length > 0) {
 				app.error = `${failed.length}件の価格を取得できませんでした: ${failed.map((i) => i.name || '(名前なし)').join('、')}`;
 			}
@@ -255,7 +251,9 @@
 
 	{#if app.authRequired}
 		<div class="banner offline">
-			ログインの有効期限が切れています。<a href={resolve('/login')}>再ログイン</a>すると未送信の変更({app.pending}件)を送信します。
+			ログインの有効期限が切れています。
+			<a href={resolve('login')}>再ログイン</a>
+			すると未送信の変更({app.pending}件)を送信します。
 		</div>
 	{:else if app.offline}
 		<div class="banner offline">
@@ -267,114 +265,119 @@
 
 	{#if app.error}
 		<div class="banner error">
-			{app.error}
-			<button type="button" class="dismiss" onclick={() => (app.error = null)}>×</button>
+			{app.error} 
+
+			<button
+				type="button"
+				class="dismiss"
+				onclick={() => app.error = null}
+			>×</button>
 		</div>
 	{/if}
 
 	{#if app.selectedGroup}
 		{@const g = app.selectedGroup}
-	<div class="group-detail">
-		<div class="detail-head">
-			<button type="button" class="back" onclick={backToList}>‹ グループ一覧</button>
-			<h1>{g.title}</h1>
-			{#if !editingGroup}
+		<div class="group-detail">
+			<div class="detail-head">
+				<button type="button" class="back" onclick={backToList}>‹ グループ一覧</button>
+				<h1>{g.title}</h1>
+				{#if !editingGroup}
 				<button type="button" class="edit" onclick={startEditGroup}>編集</button>
-			{/if}
+				{/if}
 			<button type="button" class="danger" onclick={handleDeleteGroup}>グループ削除</button>
-		</div>
-		{#if editingGroup}
-			<form class="group-edit card" onsubmit={saveEditGroup}>
-				<label class="field">
-					<span>タイトル *</span>
+			</div>
+			{#if editingGroup}
+				<form class="group-edit card" onsubmit={saveEditGroup}>
+					<label class="field">
+						<span>タイトル *</span>
 					<input type="text" bind:value={editTitle} placeholder="食器用洗剤" />
-				</label>
-				<label class="field">
-					<span>単位ラベル(任意・表示用)</span>
-					<input type="text" bind:value={editUnit} placeholder="ml" />
-				</label>
-				<div class="edit-actions">
+					</label>
+					<label class="field">
+						<span>単位ラベル(任意・表示用)</span>
+						<input type="text" bind:value={editUnit} placeholder="ml" />
+					</label>
+					<div class="edit-actions">
 					<button type="submit" class="primary" disabled={!editTitle.trim()}>保存</button>
-					<button type="button" onclick={cancelEditGroup}>キャンセル</button>
-				</div>
-			</form>
-		{/if}
+						<button type="button" onclick={cancelEditGroup}>キャンセル</button>
+					</div>
+				</form>
+			{/if}
 		<p class="hint">
 			単価の安い順に並びます。単位はこのグループ内で揃えてください(単位変換はしません)。
 		</p>
 
-		{#if bulk}
-			<div class="bulk card">
-				<progress max={bulk.total} value={bulk.done}></progress>
-				<span>価格取得中… {bulk.done} / {bulk.total}</span>
+			{#if bulk}
+				<div class="bulk card">
+					<progress max={bulk.total} value={bulk.done}></progress>
+					<span>価格取得中… {bulk.done} / {bulk.total}</span>
 				<button type="button" onclick={cancelScrapeAll} disabled={bulk.cancelled}>
 					{bulk.cancelled ? '中止中…' : '中止'}
 				</button>
-			</div>
-		{:else if user && !app.offline && app.items.some((i) => i.url)}
-			<button
-				type="button"
-				class="scrape-all"
-				onclick={handleScrapeAll}
-				disabled={scrapingId !== null}
+				</div>
+			{:else if user && !app.offline && app.items.some((i) => i.url)}
+				<button
+					type="button"
+					class="scrape-all"
+					onclick={handleScrapeAll}
+					disabled={scrapingId !== null}
 			>
 				一括価格取得
 			</button>
-		{/if}
+			{/if}
 
-		<ItemTable
-			items={app.sortedItems}
-			unitLabel={g.unitLabel}
-			onedit={(item) => (editingItem = item)}
-			ondelete={handleDeleteItem}
-			onscrape={user && !app.offline && !bulk ? handleScrape : undefined}
-			{scrapingId}
-			{editingItem}
-			onsubmitEdit={handleUpdateItem}
-			oncancelEdit={() => (editingItem = null)}
-		/>
+			<ItemTable
+				items={app.sortedItems}
+				unitLabel={g.unitLabel}
+				onedit={(item) => editingItem = item}
+				ondelete={handleDeleteItem}
+				onscrape={user && !app.offline && !bulk ? handleScrape : undefined}
+				scrapingId={scrapingId}
+				editingItem={editingItem}
+				onsubmitEdit={handleUpdateItem}
+				oncancelEdit={() => editingItem = null}
+			/>
 
-		<section class="form-card card">
-			<h2>商品を追加</h2>
+			<section class="form-card card">
+				<h2>商品を追加</h2>
 			<ItemForm groupId={g.id} unitLabel={g.unitLabel} onsubmit={handleAddItem} />
-		</section>
-	</div>
-{:else}
-	<div class="group-list">
-		<h1>グループ</h1>
-		<p class="hint">比較したい商品の括り(例: 食器用洗剤)を作り、中に容量違いの商品を登録します。</p>
+			</section>
+		</div>
+	{:else}
+		<div class="group-list">
+			<h1>グループ</h1>
+			<p class="hint">比較したい商品の括り(例: 食器用洗剤)を作り、中に容量違いの商品を登録します。</p>
 
-		{#if app.groups.length === 0}
-			<p class="empty">まだグループがありません。</p>
-		{:else}
-			<ul class="groups">
-				{#each app.groups as group (group.id)}
-					<li>
+			{#if app.groups.length === 0}
+				<p class="empty">まだグループがありません。</p>
+			{:else}
+				<ul class="groups">
+					{#each app.groups as group (group.id)}
+						<li>
 						<button type="button" class="group-item" onclick={() => openGroup(group.id)}>
-							<span class="g-title">{group.title}</span>
+								<span class="g-title">{group.title}</span>
 							{#if group.unitLabel.trim()}<span class="g-unit">単位: {group.unitLabel}</span>{/if}
-							<span class="chev">›</span>
-						</button>
-					</li>
-				{/each}
-			</ul>
-		{/if}
+								<span class="chev">›</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 
-		<section class="form-card card">
-			<h2>グループを追加</h2>
-			<form class="group-form" onsubmit={createGroup}>
-				<label class="field">
-					<span>タイトル *</span>
+			<section class="form-card card">
+				<h2>グループを追加</h2>
+				<form class="group-form" onsubmit={createGroup}>
+					<label class="field">
+						<span>タイトル *</span>
 					<input type="text" bind:value={newTitle} placeholder="食器用洗剤" />
-				</label>
-				<label class="field">
-					<span>単位ラベル(任意・表示用)</span>
-					<input type="text" bind:value={newUnit} placeholder="ml" />
-				</label>
+					</label>
+					<label class="field">
+						<span>単位ラベル(任意・表示用)</span>
+						<input type="text" bind:value={newUnit} placeholder="ml" />
+					</label>
 				<button type="submit" class="primary" disabled={!newTitle.trim()}>追加</button>
-			</form>
-		</section>
-	</div>
+				</form>
+			</section>
+		</div>
 	{/if}
 {/if}
 

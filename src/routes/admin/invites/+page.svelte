@@ -6,8 +6,8 @@
 		revokeInvite,
 		deleteInvite,
 		type AdminInvite
-	} from '$lib/admin/client';
-	import { formatDateTime } from '$lib/format';
+	} from '#lib/admin/client.js';
+	import { formatDateTime } from '#lib/format.js';
 
 	let invites = $state<AdminInvite[]>([]);
 	let expiry = $state('168');

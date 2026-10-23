@@ -1,9 +1,9 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import * as data from '$lib/server/data';
-import { requireUser } from '$lib/server/apiGuard';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import * as data from '#lib/server/data.js';
+import { requireUser } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
-import type { GroupInput } from '$lib/repo/types';
+import type { GroupInput } from '#lib/repo/types.js';
 
 export const PATCH: RequestHandler = async ({ locals, params, request }) => {
 	const user = requireUser(locals);
@@ -13,7 +13,7 @@ export const PATCH: RequestHandler = async ({ locals, params, request }) => {
 	if (typeof body?.unitLabel === 'string') patch.unitLabel = body.unitLabel.trim();
 	const updated = data.updateGroup(db, user.id, params.id, patch);
 	if (!updated) throw error(404, 'グループが見つかりません。');
-	return json(updated);
+	return Response.json(updated);
 };
 
 export const DELETE: RequestHandler = ({ locals, params }) => {

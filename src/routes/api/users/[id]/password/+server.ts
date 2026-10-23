@@ -1,8 +1,8 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { resetUserPassword, type AdminError, type Actor } from '$lib/server/admin';
-import { hashPassword, validatePassword } from '$lib/server/auth';
-import { requireAdmin } from '$lib/server/apiGuard';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import { resetUserPassword, type AdminError, type Actor } from '#lib/server/admin.js';
+import { hashPassword, validatePassword } from '#lib/server/auth.js';
+import { requireAdmin } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
 
 const STATUS: Record<AdminError, number> = { not_found: 404, forbidden: 403, last_super_admin: 409 };
@@ -19,5 +19,5 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 	const actor: Actor = { id: user.id, role: user.role };
 	const result = resetUserPassword(db, actor, params.id, hash);
 	if (!result.ok) throw error(STATUS[result.error], 'パスワードを変更できませんでした。');
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

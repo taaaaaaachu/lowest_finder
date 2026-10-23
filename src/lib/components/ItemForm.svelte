@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import type { Item } from '$lib/types';
-	import type { ItemInput } from '$lib/repo/types';
-	import { evaluateExpression, normalizeNumericInput, type EvalResult } from '$lib/domain/expression';
+	import type { Item } from '#lib/types.js';
+	import type { ItemInput } from '#lib/repo/types.js';
+	import { evaluateExpression, normalizeNumericInput, type EvalResult } from '#lib/domain/expression.js';
 
 	interface Props {
 		groupId: string;

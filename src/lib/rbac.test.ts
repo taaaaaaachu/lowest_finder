@@ -6,7 +6,7 @@ import {
 	canSetRole,
 	canDeleteUser,
 	canResetPassword
-} from '$lib/rbac';
+} from '#lib/rbac.js';
 
 describe('isAtLeast / 管理アクセス', () => {
 	it('階層比較', () => {

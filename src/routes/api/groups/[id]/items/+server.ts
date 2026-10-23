@@ -1,14 +1,14 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import * as data from '$lib/server/data';
-import { clientId, requireUser } from '$lib/server/apiGuard';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import * as data from '#lib/server/data.js';
+import { clientId, requireUser } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = ({ locals, params }) => {
 	const user = requireUser(locals);
 	const items = data.listItems(db, user.id, params.id);
 	if (items === null) throw error(404, 'グループが見つかりません。');
-	return json(items);
+	return Response.json(items);
 };
 
 export const POST: RequestHandler = async ({ locals, params, request }) => {
@@ -32,5 +32,5 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 		clientId(body)
 	);
 	if (!item) throw error(404, 'グループが見つかりません。');
-	return json(item, { status: 201 });
+	return Response.json(item, { status: 201 });
 };

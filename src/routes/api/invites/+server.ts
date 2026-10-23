@@ -1,7 +1,7 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { createInvite, listAllInvites } from '$lib/server/invites';
-import { requireAdmin } from '$lib/server/apiGuard';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import { createInvite, listAllInvites } from '#lib/server/invites.js';
+import { requireAdmin } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
 
 // 発行時に選べる有効期限(時間)。null は無期限。
@@ -10,7 +10,7 @@ const ALLOWED_HOURS = new Set([1, 24, 168, 720]);
 /** 全招待のグローバル一覧(管理者以上)。 */
 export const GET: RequestHandler = ({ locals }) => {
 	requireAdmin(locals);
-	return json(listAllInvites(db));
+	return Response.json(listAllInvites(db));
 };
 
 /** 招待コードの発行(管理者以上)。 */
@@ -27,5 +27,5 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	}
 
 	const invite = createInvite(db, user.id, expiresAt);
-	return json({ code: invite.code, expiresAt: invite.expiresAt }, { status: 201 });
+	return Response.json({ code: invite.code, expiresAt: invite.expiresAt }, { status: 201 });
 };

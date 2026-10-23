@@ -22,7 +22,7 @@
 
 | 分類 | 採用技術 |
 | --- | --- |
-| フロントエンド | Svelte 5 / SvelteKit 2 / TypeScript 6 / Vite 8 |
+| フロントエンド | Svelte 5 / SvelteKit 3 / TypeScript 6 / Vite 8 |
 | サーバー | SvelteKit(`@sveltejs/adapter-node`)。フロントと API を 1 つのアプリにまとめている |
 | DB | SQLite(better-sqlite3)+ Drizzle ORM(マイグレーションは drizzle-kit で生成) |
 | クライアント保存 | IndexedDB(`idb`) |
@@ -91,7 +91,7 @@ CI([.github/workflows/ci.yml](./.github/workflows/ci.yml))では、`main` への
 
 ## ローカルでの起動方法
 
-Node.js 22 を想定している(CI と Docker イメージが Node.js 22)。
+Node.js 22.17 以上を想定している(SvelteKit 3 の要件。CI と Docker イメージは Node.js 22 系の最新)。
 
 ```bash
 npm ci
@@ -119,7 +119,7 @@ docker compose -f docker-compose.local.yml down          # 停止
 ```
 
 - DB は `./data` に保存される。
-- 本番の compose には公開オリジンを `ORIGIN` で渡す([.env.example](./.env.example) を `.env` にコピーして設定)。ローカル用 compose は `http://localhost:3000` を指定済み。`ORIGIN` が実際のアクセス先と違うと、フォームの POST が CSRF 対策で 403 になる。
+- 公開オリジンは、本番(Cloudflare Tunnel 配下)では指定しない。cloudflared が転送する Host ヘッダーと https から決まる。ローカル用 compose は http でアクセスするので、ビルド引数 `ORIGIN=http://localhost:3000` で焼き込んでいる。オリジンが実際のアクセス先と違うと、フォームの POST が CSRF 対策で 403 になり、パスキーの検証も失敗する。
 
 ## デプロイ
 

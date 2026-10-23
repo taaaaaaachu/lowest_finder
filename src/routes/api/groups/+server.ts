@@ -1,12 +1,12 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import * as data from '$lib/server/data';
-import { clientId, requireUser } from '$lib/server/apiGuard';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import * as data from '#lib/server/data.js';
+import { clientId, requireUser } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = ({ locals }) => {
 	const user = requireUser(locals);
-	return json(data.listGroups(db, user.id));
+	return Response.json(data.listGroups(db, user.id));
 };
 
 export const POST: RequestHandler = async ({ locals, request }) => {
@@ -17,5 +17,5 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	if (!title) throw error(400, 'タイトルは必須です。');
 	const group = data.createGroup(db, user.id, { title, unitLabel }, clientId(body));
 	if (!group) throw error(404, 'グループが見つかりません。');
-	return json(group, { status: 201 });
+	return Response.json(group, { status: 201 });
 };

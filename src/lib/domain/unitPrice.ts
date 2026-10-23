@@ -1,4 +1,4 @@
-import type { Item } from '$lib/types';
+import type { Item } from '#lib/types.js';
 
 /**
  * 単価 = 価格 ÷ 内容量。

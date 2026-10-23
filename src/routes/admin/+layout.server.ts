@@ -1,5 +1,5 @@
 import { error, redirect } from '@sveltejs/kit';
-import { canAccessAdmin } from '$lib/rbac';
+import { canAccessAdmin } from '#lib/rbac.js';
 import type { LayoutServerLoad } from './$types';
 
 /** /admin/* 全体を管理者以上に限定する。 */

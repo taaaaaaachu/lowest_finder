@@ -1,11 +1,10 @@
-import { json } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { listUsers } from '$lib/server/admin';
-import { requireAdmin } from '$lib/server/apiGuard';
+import { db } from '#lib/server/db/index.js';
+import { listUsers } from '#lib/server/admin.js';
+import { requireAdmin } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
 
 /** 全ユーザー一覧(管理者以上)。 */
 export const GET: RequestHandler = ({ locals }) => {
 	requireAdmin(locals);
-	return json(listUsers(db));
+	return Response.json(listUsers(db));
 };

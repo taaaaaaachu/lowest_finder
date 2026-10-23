@@ -7,7 +7,7 @@ declare global {
 			user: {
 				id: string;
 				username: string;
-				role: import('$lib/server/db/schema').Role;
+				role: import('#lib/server/db/schema.js').Role;
 				/** 仮パスワードでログイン中なら、変更を済ませるまで他の操作はできない。 */
 				passwordTemporary: boolean;
 			} | null;

@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb';
-import type { Group, Item } from '$lib/types';
+import type { Group, Item } from '#lib/types.js';
 import type { GroupInput, ItemInput, Repository, Snapshot } from './types';
 import { req } from './api';
 

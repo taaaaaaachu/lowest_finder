@@ -1,15 +1,15 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { setOwnPassword } from '$lib/server/admin';
-import { getCredentialSummary, removePassword } from '$lib/server/credentials';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import { setOwnPassword } from '#lib/server/admin.js';
+import { getCredentialSummary, removePassword } from '#lib/server/credentials.js';
 import {
 	hashPassword,
 	validatePassword,
 	verifyCredentials,
 	hashSessionToken,
 	SESSION_COOKIE
-} from '$lib/server/auth';
-import { requireRecentAuth, requireUser } from '$lib/server/apiGuard';
+} from '#lib/server/auth.js';
+import { requireRecentAuth, requireUser } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
 
 /**
@@ -45,7 +45,7 @@ export const POST: RequestHandler = async ({ locals, request, cookies }) => {
 	const keepSessionId = token ? hashSessionToken(token) : '';
 	const hash = await hashPassword(newPassword);
 	setOwnPassword(db, user.id, hash, keepSessionId);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
 
 /** パスワードの削除(パスキーのみの会員にする)。パスキーが無ければ 409。 */
@@ -58,5 +58,5 @@ export const DELETE: RequestHandler = async ({ locals }) => {
 		}
 		throw error(404, 'パスワードは設定されていません。');
 	}
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

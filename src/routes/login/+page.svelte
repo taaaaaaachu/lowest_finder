@@ -4,7 +4,7 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { browserSupportsWebAuthnAutofill } from '@simplewebauthn/browser';
-	import { loginWithPasskey, isPasskeyCancel } from '$lib/admin/client';
+	import { loginWithPasskey, isPasskeyCancel } from '#lib/admin/client.js';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -15,7 +15,7 @@
 	async function passkeyLogin(useBrowserAutofill: boolean) {
 		try {
 			await loginWithPasskey(useBrowserAutofill);
-			await goto(resolve('/'), { invalidateAll: true });
+			await goto(resolve('/'), { refreshAll: true });
 		} catch (err) {
 			if (isPasskeyCancel(err)) return;
 			passkeyError = err instanceof Error ? err.message : 'パスキーでログインできませんでした。';
@@ -40,10 +40,16 @@
 <div class="auth card">
 	<h1>ログイン</h1>
 
-	<button type="button" class="primary passkey" onclick={onPasskeyButton} disabled={busy}>
-		{busy ? '確認中…' : 'パスキーでログイン'}
-	</button>
-	{#if passkeyError}<p class="err">{passkeyError}</p>{/if}
+	<button
+		type="button"
+		class="primary passkey"
+		onclick={onPasskeyButton}
+		disabled={busy}
+	>{busy ? '確認中…' : 'パスキーでログイン'}</button>
+
+	{#if passkeyError}
+		<p class="err">{passkeyError}</p>
+	{/if}
 
 	<p class="or">または パスワードでログイン</p>
 
@@ -66,7 +72,7 @@
 		<button type="submit">ログイン</button>
 	</form>
 
-	<p class="alt">アカウントがない場合は <a href={resolve('/register')}>会員登録</a></p>
+	<p class="alt">アカウントがない場合は <a href={resolve('register')}>会員登録</a></p>
 </div>
 
 <style>

@@ -2,11 +2,11 @@
 	import { resolve } from '$app/paths';
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { version } from '$app/environment';
+	import { version } from '$app/env';
 	import { enhance } from '$app/forms';
 	import { invalidate } from '$app/navigation';
-	import { canAccessAdmin } from '$lib/rbac';
-	import { app } from '$lib/stores/app.svelte';
+	import { canAccessAdmin } from '#lib/rbac.js';
+	import { app } from '#lib/stores/app.svelte.js';
 
 	let { children, data } = $props();
 
@@ -28,6 +28,8 @@
 		navigator.serviceWorker
 			.register(`/service-worker.js?v=${encodeURIComponent(version)}`, {
 				scope: '/',
+				// SvelteKit 3 は Service Worker を ES モジュールとしてバンドルする。
+				type: 'module',
 				updateViaCache: 'none'
 			})
 			.catch((error: unknown) => console.error('Service Workerの登録に失敗しました', error));
@@ -49,9 +51,9 @@
 				<div class="account">
 					{#if !data.user.passwordTemporary}
 						{#if canAccessAdmin(data.user.role)}
-							<a class="nav-link" href={resolve('/admin/users')}>管理</a>
+							<a class="nav-link" href={resolve('admin/users')}>管理</a>
 						{/if}
-						<a class="nav-link" href={resolve('/account')}>アカウント</a>
+						<a class="nav-link" href={resolve('account')}>アカウント</a>
 					{/if}
 					<span class="mode member">@{data.user.username}</span>
 					<form
@@ -68,7 +70,7 @@
 			{:else}
 				<div class="account">
 					<span class="mode">ゲスト</span>
-					<a class="login-link" href={resolve('/login')}>ログイン</a>
+					<a class="login-link" href={resolve('login')}>ログイン</a>
 				</div>
 			{/if}
 		</div>

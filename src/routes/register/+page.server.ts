@@ -4,10 +4,10 @@ import {
 	hashPassword,
 	validatePassword,
 	validateUsername
-} from '$lib/server/auth';
-import { setSessionCookie } from '$lib/server/sessionCookie';
-import { db } from '$lib/server/db';
-import { countUsers, registerUser, REGISTER_ERROR_MESSAGES } from '$lib/server/invites';
+} from '#lib/server/auth.js';
+import { setSessionCookie } from '#lib/server/sessionCookie.js';
+import { db } from '#lib/server/db/index.js';
+import { countUsers, registerUser, REGISTER_ERROR_MESSAGES } from '#lib/server/invites.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {

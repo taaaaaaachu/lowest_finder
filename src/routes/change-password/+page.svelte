@@ -8,7 +8,7 @@
 		isPasskeyCancel,
 		reauthenticate,
 		setOwnPassword
-	} from '$lib/admin/client';
+	} from '#lib/admin/client.js';
 
 	let error = $state<string | null>(null);
 	let busy = $state(false);
@@ -25,7 +25,7 @@
 		busy = true;
 		try {
 			await action();
-			await goto(resolve('/'), { invalidateAll: true });
+			await goto(resolve('/'), { refreshAll: true });
 		} catch (err) {
 			if (err instanceof ApiError && err.status === REAUTH_REQUIRED) {
 				pending = action;

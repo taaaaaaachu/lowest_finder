@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { getCredentialSummary } from '$lib/server/credentials';
+import { db } from '#lib/server/db/index.js';
+import { getCredentialSummary } from '#lib/server/credentials.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {

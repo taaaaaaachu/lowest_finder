@@ -1,8 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { createSession, hashPassword, validatePassword } from '$lib/server/auth';
-import { setSessionCookie } from '$lib/server/sessionCookie';
-import { consumeResetLink, findResetLink } from '$lib/server/resetLinks';
+import { db } from '#lib/server/db/index.js';
+import { createSession, hashPassword, validatePassword } from '#lib/server/auth.js';
+import { setSessionCookie } from '#lib/server/sessionCookie.js';
+import { consumeResetLink, findResetLink } from '#lib/server/resetLinks.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {

@@ -15,7 +15,7 @@ push/PR ──▶ GitHub Actions (check / test)
 
 - NAS は宅内にあり外部から到達できないので、GitHub からは **push しない**。NAS が **pull で取りに行く**。
 - ポート開放・VPN は不要(必要な外向き通信は GHCR への HTTPS のみ)。
-- ビルドはランタイム env 非依存(`ORIGIN` 等は実行時に compose の `environment:` で注入)。
+- ビルドはランタイム env 非依存(`DATABASE_PATH` 等は実行時に compose の `environment:` で注入)。公開オリジンは設定せず、cloudflared が転送する Host ヘッダーから決まる。
 - **Watchtower は lowest_finder の compose には含めない**。`/var/run/docker.sock` 経由で Docker ホスト
   全体を監視できるため、NAS 全体で **1 台だけ独立プロジェクト**として動かし、enable ラベルの付いた
   全プロジェクトの app(stockify / lowest_finder 等)をまとめて自動更新する。lowest_finder を作り直しても
@@ -80,7 +80,7 @@ GHCR パッケージは既定で private。Watchtower が pull できるよう�
 
 **認証を省きたい場合**: GitHub の Packages ページで当該パッケージを **public** に変更すれば、
 PAT の発行・上記ログイン・compose の `config.json` マウント行はすべて不要になる
-(イメージには秘密が焼き込まれていない = `ORIGIN` は実行時注入のため)。
+(イメージには秘密も公開ドメインも焼き込まれていないため)。
 
 ### 3. NAS で共用ネットワークと Cloudflare Tunnel を起動
 

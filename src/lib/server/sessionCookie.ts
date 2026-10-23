@@ -1,5 +1,5 @@
 import type { Cookies } from '@sveltejs/kit';
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 import { SESSION_COOKIE } from './auth';
 
 /** ログイン成功時にセッション Cookie を設定する。 */

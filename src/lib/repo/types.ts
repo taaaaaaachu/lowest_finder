@@ -1,4 +1,4 @@
-import type { Group, Item } from '$lib/types';
+import type { Group, Item } from '#lib/types.js';
 
 /** 新規グループ作成の入力(id はリポジトリ側で採番)。 */
 export interface GroupInput {

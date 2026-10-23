@@ -1,9 +1,9 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import * as data from '$lib/server/data';
-import { requireUser } from '$lib/server/apiGuard';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import * as data from '#lib/server/data.js';
+import { requireUser } from '#lib/server/apiGuard.js';
 import type { RequestHandler } from './$types';
-import type { Snapshot } from '$lib/repo/types';
+import type { Snapshot } from '#lib/repo/types.js';
 
 /** ゲストデータ(スナップショット)を会員データへ取り込む。 */
 export const POST: RequestHandler = async ({ locals, request }) => {
@@ -13,5 +13,5 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		throw error(400, '取り込みデータの形式が不正です。');
 	}
 	const result = data.importSnapshot(db, user.id, body);
-	return json(result);
+	return Response.json(result);
 };

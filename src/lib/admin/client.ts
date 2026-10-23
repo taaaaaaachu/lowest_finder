@@ -1,5 +1,5 @@
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
-import type { Role } from '$lib/rbac';
+import type { Role } from '#lib/rbac.js';
 
 /** API の失敗。status で「本人確認が必要(428)」などを判別できる。 */
 export class ApiError extends Error {

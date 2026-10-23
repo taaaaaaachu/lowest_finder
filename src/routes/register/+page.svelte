@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { enhance } from '$app/forms';
-	import type { SubmitFunction } from '@sveltejs/kit';
+	import { enhance, type SubmitFunction } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { signupWithPasskey, isPasskeyCancel } from '$lib/admin/client';
+	import { signupWithPasskey, isPasskeyCancel } from '#lib/admin/client.js';
 	import type { ActionData, PageData } from './$types';
 
 	let { form, data }: { form: ActionData; data: PageData } = $props();
@@ -24,7 +23,7 @@
 		busy = true;
 		try {
 			await signupWithPasskey(String(fd.get('username') ?? ''), String(fd.get('invite') ?? ''));
-			await goto(resolve('/'), { invalidateAll: true });
+			await goto(resolve('/'), { refreshAll: true });
 		} catch (err) {
 			if (!isPasskeyCancel(err)) {
 				passkeyError = err instanceof Error ? err.message : '登録に失敗しました。';
@@ -74,7 +73,7 @@
 		<button type="submit" class="primary" disabled={busy}>{busy ? '確認中…' : '登録する'}</button>
 	</form>
 
-	<p class="alt">すでにアカウントがある場合は <a href={resolve('/login')}>ログイン</a></p>
+	<p class="alt">すでにアカウントがある場合は <a href={resolve('login')}>ログイン</a></p>
 </div>
 
 <style>

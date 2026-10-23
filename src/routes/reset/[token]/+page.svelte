@@ -3,7 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { isPasskeyCancel, resetWithPasskey } from '$lib/admin/client';
+	import { isPasskeyCancel, resetWithPasskey } from '#lib/admin/client.js';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -18,7 +18,7 @@
 		busy = true;
 		try {
 			await resetWithPasskey(page.params.token!, passkeyName);
-			await goto(resolve('/'), { invalidateAll: true });
+			await goto(resolve('/'), { refreshAll: true });
 		} catch (err) {
 			if (!isPasskeyCancel(err)) {
 				passkeyError = err instanceof Error ? err.message : 'パスキーを登録できませんでした。';

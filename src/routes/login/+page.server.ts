@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { createSession, verifyCredentials } from '$lib/server/auth';
-import { setSessionCookie } from '$lib/server/sessionCookie';
+import { createSession, verifyCredentials } from '#lib/server/auth.js';
+import { setSessionCookie } from '#lib/server/sessionCookie.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {

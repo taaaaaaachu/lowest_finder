@@ -1,8 +1,8 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { createSession } from '$lib/server/auth';
-import { setSessionCookie } from '$lib/server/sessionCookie';
-import { takeChallenge, verifyAuthentication } from '$lib/server/webauthn';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import { createSession } from '#lib/server/auth.js';
+import { setSessionCookie } from '#lib/server/sessionCookie.js';
+import { takeChallenge, verifyAuthentication } from '#lib/server/webauthn.js';
 import type { RequestHandler } from './$types';
 
 /** パスキーでログインする。body: { response }。 */
@@ -16,5 +16,5 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 
 	const { token, expiresAt } = createSession(passkey.userId);
 	setSessionCookie(cookies, token, expiresAt);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

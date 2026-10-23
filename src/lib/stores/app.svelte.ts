@@ -1,6 +1,6 @@
-import type { Group, Item } from '$lib/types';
-import type { GroupInput, ItemInput, Repository } from '$lib/repo/types';
-import { sortItemsByUnitPrice } from '$lib/domain/unitPrice';
+import type { Group, Item } from '#lib/types.js';
+import type { GroupInput, ItemInput, Repository } from '#lib/repo/types.js';
+import { sortItemsByUnitPrice } from '#lib/domain/unitPrice.js';
 
 /**
  * 画面全体の状態を持つストア。どのリポジトリ(ゲスト/会員)で動くかを差し替えられる。

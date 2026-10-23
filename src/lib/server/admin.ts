@@ -1,7 +1,7 @@
 import { and, eq, ne, gt, asc } from 'drizzle-orm';
 import type { Db } from './db';
 import { users, sessions, passkeys, resetLinks, type Role } from './db/schema';
-import { canDeleteUser, canResetPassword, canSetRole } from '$lib/rbac';
+import { canDeleteUser, canResetPassword, canSetRole } from '#lib/rbac.js';
 
 export interface Actor {
 	id: string;

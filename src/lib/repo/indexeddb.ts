@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Group, Item } from '$lib/types';
+import type { Group, Item } from '#lib/types.js';
 import type { GroupInput, ItemInput, Repository, Snapshot } from './types';
 
 const DB_NAME = 'lowest-finder';

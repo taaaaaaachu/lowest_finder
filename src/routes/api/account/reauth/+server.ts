@@ -1,9 +1,9 @@
-import { json, error } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { markSessionVerified, verifyCredentials } from '$lib/server/auth';
-import { requireUser } from '$lib/server/apiGuard';
-import { rateLimit } from '$lib/server/rateLimit';
-import { takeChallenge, verifyAuthentication } from '$lib/server/webauthn';
+import { error } from '@sveltejs/kit';
+import { db } from '#lib/server/db/index.js';
+import { markSessionVerified, verifyCredentials } from '#lib/server/auth.js';
+import { requireUser } from '#lib/server/apiGuard.js';
+import { rateLimit } from '#lib/server/rateLimit.js';
+import { takeChallenge, verifyAuthentication } from '#lib/server/webauthn.js';
 import type { RequestHandler } from './$types';
 
 /** 本人確認(再認証)。body: { password } または { response }(パスキーの認証応答)。 */
@@ -27,5 +27,5 @@ export const POST: RequestHandler = async ({ locals, request, cookies, url }) =>
 	if (!ok) throw error(400, '本人確認できませんでした。');
 
 	markSessionVerified(locals.session!.id);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
