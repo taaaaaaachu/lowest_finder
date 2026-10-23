@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import type { Item } from '$lib/types';
 	import type { ItemInput } from '$lib/repo/types';
 	import { evaluateExpression, normalizeNumericInput, type EvalResult } from '$lib/domain/expression';
@@ -14,14 +15,16 @@
 
 	let { groupId, unitLabel, item = null, onsubmit, oncancel }: Props = $props();
 
-	let name = $state(item?.name ?? '');
-	let volume = $state(item ? String(item.volume) : '');
-	let price = $state(item ? String(item.price) : '');
-	let url = $state(item?.url ?? '');
+	// 入力欄は開いた時点の item を初期値にした下書き。item が後から変わっても入力中の値は上書きしない。
+	const initial = untrack(() => item);
+	let name = $state(initial?.name ?? '');
+	let volume = $state(initial ? String(initial.volume) : '');
+	let price = $state(initial ? String(initial.price) : '');
+	let url = $state(initial?.url ?? '');
 	let submitting = $state(false);
 	let localError = $state<string | null>(null);
 
-	const isEdit = item !== null;
+	const isEdit = $derived(item !== null);
 
 	// 価格・内容量は計算式(例: 100 * 3)も受け付ける。入力するたびに評価する。
 	const volumeResult = $derived(evaluateExpression(volume));
