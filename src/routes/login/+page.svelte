@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
@@ -14,7 +15,7 @@
 	async function passkeyLogin(useBrowserAutofill: boolean) {
 		try {
 			await loginWithPasskey(useBrowserAutofill);
-			await goto('/?welcome=1', { invalidateAll: true });
+			await goto(resolve('/'), { invalidateAll: true });
 		} catch (err) {
 			if (isPasskeyCancel(err)) return;
 			passkeyError = err instanceof Error ? err.message : 'パスキーでログインできませんでした。';
@@ -65,7 +66,7 @@
 		<button type="submit">ログイン</button>
 	</form>
 
-	<p class="alt">アカウントがない場合は <a href="/register">会員登録</a></p>
+	<p class="alt">アカウントがない場合は <a href={resolve('/register')}>会員登録</a></p>
 </div>
 
 <style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	let { children } = $props();
@@ -6,12 +7,12 @@
 	const tabs = [
 		{ href: '/admin/users', label: 'ユーザー管理' },
 		{ href: '/admin/invites', label: '招待管理' }
-	];
+	] as const;
 </script>
 
 <nav class="tabs">
 	{#each tabs as tab (tab.href)}
-		<a href={tab.href} class:active={page.url.pathname === tab.href}>{tab.label}</a>
+		<a href={resolve(tab.href)} class:active={page.url.pathname === tab.href}>{tab.label}</a>
 	{/each}
 </nav>
 

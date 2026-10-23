@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
@@ -75,7 +76,7 @@
 			const res = await deleteUser(u.id);
 			if (res.selfDeleted) {
 				// 自分を消したらセッションも消えている。トップへ。
-				await goto('/', { invalidateAll: true });
+				await goto(resolve('/'), { invalidateAll: true });
 				return;
 			}
 			notice = `${u.username} を削除しました。`;

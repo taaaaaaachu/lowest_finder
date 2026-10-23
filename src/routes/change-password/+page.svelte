@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import {
 		ApiError,
@@ -24,7 +25,7 @@
 		busy = true;
 		try {
 			await action();
-			await goto('/', { invalidateAll: true });
+			await goto(resolve('/'), { invalidateAll: true });
 		} catch (err) {
 			if (err instanceof ApiError && err.status === REAUTH_REQUIRED) {
 				pending = action;

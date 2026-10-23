@@ -15,7 +15,7 @@ export const POST: RequestHandler = async ({ locals, request, cookies, url }) =>
 	}
 	const body = await request.json().catch(() => null);
 
-	let ok = false;
+	let ok: boolean;
 	if (typeof body?.password === 'string') {
 		ok = (await verifyCredentials(user.username, body.password)) !== null;
 	} else {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { app } from '$lib/stores/app.svelte';
@@ -254,7 +255,7 @@
 
 	{#if app.authRequired}
 		<div class="banner offline">
-			ログインの有効期限が切れています。<a href="/login">再ログイン</a>すると未送信の変更({app.pending}件)を送信します。
+			ログインの有効期限が切れています。<a href={resolve('/login')}>再ログイン</a>すると未送信の変更({app.pending}件)を送信します。
 		</div>
 	{:else if app.offline}
 		<div class="banner offline">

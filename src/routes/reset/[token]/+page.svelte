@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -17,7 +18,7 @@
 		busy = true;
 		try {
 			await resetWithPasskey(page.params.token!, passkeyName);
-			await goto('/', { invalidateAll: true });
+			await goto(resolve('/'), { invalidateAll: true });
 		} catch (err) {
 			if (!isPasskeyCancel(err)) {
 				passkeyError = err instanceof Error ? err.message : 'パスキーを登録できませんでした。';

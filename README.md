@@ -30,7 +30,7 @@
 | スクレイピング | Node.js の `fetch` + `node-html-parser` |
 | PWA | Web App Manifest + 自前の Service Worker |
 | インフラ | Docker(Node.js 22)、Cloudflare Tunnel による公開 |
-| CI/CD | GitHub Actions(型チェック・テスト → GHCR へイメージ配布)、Watchtower によるプル型デプロイ |
+| CI/CD | GitHub Actions(lint・型チェック・テスト → GHCR へイメージ配布)、Watchtower によるプル型デプロイ |
 | テスト | Vitest 4、fake-indexeddb |
 
 ## アーキテクチャと設計判断
@@ -87,7 +87,7 @@
 - **スクレイピング**: 各サイトのアダプタ、価格の解析、SSRF 判定。
 - **Service Worker と PWA**: リクエストごとのキャッシュ戦略の判定、manifest の内容。
 
-CI([.github/workflows/ci.yml](./.github/workflows/ci.yml))では、`main` への push とすべての PR で `npm run check`(svelte-check による型チェック)と `npm test` を実行する。
+CI([.github/workflows/ci.yml](./.github/workflows/ci.yml))では、`main` への push とすべての PR で `npm run lint`(ESLint)、`npm run check`(svelte-check による型チェック)、`npm test` を実行する。
 
 ## ローカルでの起動方法
 
@@ -104,6 +104,7 @@ npm run dev          # http://localhost:5173
 | コマンド | 内容 |
 | --- | --- |
 | `npm test` | テストを実行 |
+| `npm run lint` / `npm run lint:fix` | ESLint による静的検査(`:fix` は自動修正) |
 | `npm run check` | 型チェック |
 | `npm run build` / `npm start` | 本番ビルドと起動 |
 | `npm run db:generate` | スキーマ変更後にマイグレーションを生成(続けて `npm run db:migrate`) |

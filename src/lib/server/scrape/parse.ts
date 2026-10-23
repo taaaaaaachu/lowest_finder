@@ -9,7 +9,7 @@ export function parsePrice(text: string | null | undefined): number | null {
 	const normalized = text
 		.replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xfee0))
 		.replace(/，/g, ',')
-		.replace(/[￥　]/g, ' ');
+		.replace(/[\uffe5\u3000]/g, ' '); // 全角￥・全角スペース
 	// 「1,380」または「1380」「1380.00」を拾う。最初に見つかった金額らしき数を採用。
 	const m = normalized.match(/(\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?/);
 	if (!m) return null;

@@ -10,7 +10,6 @@ on:
 
 jobs:
   # --- CI: 静的検査とテスト ---
-  # lowest_finder には lint スクリプトが無いため check(svelte-check)と test だけを回す。
   test:
     runs-on: ubuntu-latest
     steps:
@@ -23,6 +22,9 @@ jobs:
 
       # svelte-kit sync は prepare(postinstall)で走る。
       - run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
 
       - name: 型チェック (svelte-check)
         run: npm run check

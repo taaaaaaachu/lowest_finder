@@ -26,7 +26,7 @@ export function normalizeNumericInput(input: string): string {
 	const halfWidth = input.replace(/[０-９]/g, (digit) =>
 		String.fromCharCode(digit.charCodeAt(0) - '０'.charCodeAt(0) + '0'.charCodeAt(0))
 	);
-	return stripCommas(halfWidth).replace(/[^0-9.+*/()\-]/g, '');
+	return stripCommas(halfWidth).replace(/[^0-9.+*/()-]/g, '');
 }
 
 /** 式の評価結果。成功なら数値、失敗なら理由付きのエラー。 */

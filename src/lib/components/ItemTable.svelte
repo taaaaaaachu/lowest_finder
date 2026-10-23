@@ -68,6 +68,8 @@
 					</div>
 					{#if item.url}
 						<div class="meta">
+							<!-- 外部の商品ページ(アプリ内のルートではない)なので resolve() は使えない。 -->
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 							<a href={item.url} target="_blank" rel="noopener noreferrer">商品ページ ↗</a>
 							{#if item.lastFetchedAt}
 								<span class="fetched">取得: {formatDateTime(item.lastFetchedAt)}</span>

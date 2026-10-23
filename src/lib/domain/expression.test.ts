@@ -114,6 +114,10 @@ describe('normalizeNumericInput', () => {
 		expect(normalizeNumericInput('(１０００.５+２)*３/２')).toBe('(1000.5+2)*3/2');
 	});
 
+	it('マイナス記号を保持する', () => {
+		expect(normalizeNumericInput('１０００-２００')).toBe('1000-200');
+	});
+
 	it('カンマを除去する', () => {
 		expect(normalizeNumericInput('1,０００，０００*２')).toBe('1000000*2');
 	});

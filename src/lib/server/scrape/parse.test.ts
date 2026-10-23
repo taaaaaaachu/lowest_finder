@@ -8,6 +8,9 @@ describe('parsePrice', () => {
 	it('1,380円(税込)を 1380 に', () => {
 		expect(parsePrice('1,380円(税込)')).toBe(1380);
 	});
+	it('全角スペースで区切られていても読む', () => {
+		expect(parsePrice('価格　１，３８０円')).toBe(1380);
+	});
 	it('全角数字・全角￥に対応', () => {
 		expect(parsePrice('￥１，３８０')).toBe(1380);
 	});

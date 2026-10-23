@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { version } from '$app/environment';
@@ -40,7 +41,7 @@
 <div class="app">
 	<header class="topbar">
 		<div class="inner">
-			<a class="brand" href="/">
+			<a class="brand" href={resolve('/')}>
 				<span class="logo">¥</span>
 				<span class="name">Lowest Finder</span>
 			</a>
@@ -48,9 +49,9 @@
 				<div class="account">
 					{#if !data.user.passwordTemporary}
 						{#if canAccessAdmin(data.user.role)}
-							<a class="nav-link" href="/admin/users">管理</a>
+							<a class="nav-link" href={resolve('/admin/users')}>管理</a>
 						{/if}
-						<a class="nav-link" href="/account">アカウント</a>
+						<a class="nav-link" href={resolve('/account')}>アカウント</a>
 					{/if}
 					<span class="mode member">@{data.user.username}</span>
 					<form
@@ -67,7 +68,7 @@
 			{:else}
 				<div class="account">
 					<span class="mode">ゲスト</span>
-					<a class="login-link" href="/login">ログイン</a>
+					<a class="login-link" href={resolve('/login')}>ログイン</a>
 				</div>
 			{/if}
 		</div>

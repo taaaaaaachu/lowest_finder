@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
@@ -23,7 +24,7 @@
 		busy = true;
 		try {
 			await signupWithPasskey(String(fd.get('username') ?? ''), String(fd.get('invite') ?? ''));
-			await goto('/?welcome=1', { invalidateAll: true });
+			await goto(resolve('/'), { invalidateAll: true });
 		} catch (err) {
 			if (!isPasskeyCancel(err)) {
 				passkeyError = err instanceof Error ? err.message : '登録に失敗しました。';
@@ -73,7 +74,7 @@
 		<button type="submit" class="primary" disabled={busy}>{busy ? '確認中…' : '登録する'}</button>
 	</form>
 
-	<p class="alt">すでにアカウントがある場合は <a href="/login">ログイン</a></p>
+	<p class="alt">すでにアカウントがある場合は <a href={resolve('/login')}>ログイン</a></p>
 </div>
 
 <style>
