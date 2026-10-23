@@ -87,7 +87,7 @@
 		error = null;
 		try {
 			await resetUserPassword(u.id, pw);
-			notice = `${u.username} のパスワードを変更し、パスキーを削除しました(対象は再ログインが必要)。`;
+			notice = `${u.username} に仮パスワードを設定し、パスキーを削除しました(次のログインでパスワードの変更が必要)。`;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'パスワード変更に失敗しました。';
 		}
@@ -133,7 +133,7 @@
 								{#if me.role === 'admin' && canSetRole(me.role, u.role, 'admin')}
 									<button type="button" onclick={() => promote(u)}>管理者にする</button>
 								{/if}
-								{#if canResetPassword(me.role, u.role)}
+								{#if u.id !== me.id && canResetPassword(me.role, u.role)}
 									<button type="button" onclick={() => resetPassword(u)}>パスワード</button>
 								{/if}
 								{#if canDeleteUser(me.role, u.role)}

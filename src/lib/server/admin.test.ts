@@ -122,6 +122,21 @@ describe('resetUserPassword', () => {
 		expect(db.select().from(passkeys).all().map((p) => p.id)).toEqual(['pk-sa']);
 	});
 
+	it('設定したパスワードは仮パスワードになる', () => {
+		const sa = addUser('sa', 'super_admin');
+		const u = addUser('u', 'user');
+		resetUserPassword(db, actor(sa, 'super_admin'), u, 'newhash');
+		expect(db.select().from(users).where(eq(users.id, u)).get()?.passwordTemporary).toBe(true);
+	});
+
+	it('super_admin でも自分自身はリセットできない', () => {
+		const sa = addUser('sa', 'super_admin');
+		expect(resetUserPassword(db, actor(sa, 'super_admin'), sa, 'x')).toEqual({
+			ok: false,
+			error: 'forbidden'
+		});
+	});
+
 	it('admin は他の admin のパスワードをリセットできない', () => {
 		const ad = addUser('ad', 'admin');
 		const ad2 = addUser('ad2', 'admin');
@@ -133,6 +148,13 @@ describe('resetUserPassword', () => {
 });
 
 describe('setOwnPassword', () => {
+	it('本人が変更すると仮パスワードではなくなる', () => {
+		const u = addUser('u', 'user');
+		db.update(users).set({ passwordTemporary: true }).where(eq(users.id, u)).run();
+		setOwnPassword(db, u, 'mine', 'keep');
+		expect(db.select().from(users).where(eq(users.id, u)).get()?.passwordTemporary).toBe(false);
+	});
+
 	it('操作中の端末セッションだけ残し、他は消える', () => {
 		const u = addUser('u', 'user');
 		db.insert(sessions).values({ id: 'keep', userId: u, expiresAt: Date.now() + 1e9 }).run();

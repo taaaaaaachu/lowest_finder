@@ -1,10 +1,11 @@
-import type { Handle } from '@sveltejs/kit';
+import { json, type Handle } from '@sveltejs/kit';
 import {
 	SESSION_COOKIE,
 	validateSessionToken,
 	invalidateSession
 } from '$lib/server/auth';
 import { dev } from '$app/environment';
+import { allowedWithTemporaryPassword } from '$lib/server/apiGuard';
 
 /** Cookie の共通属性。HTTPS 前提(Cloudflare Tunnel)なので Secure を付ける。 */
 function cookieOpts(expires: Date) {
@@ -36,6 +37,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 			invalidateSession(token);
 			event.cookies.delete(SESSION_COOKIE, { path: '/' });
 		}
+	}
+
+	// 仮パスワードの会員は変更を済ませるまで他の API を使えない(ページ側はルートレイアウトで変更画面へ戻す)。
+	const path = event.url.pathname;
+	if (
+		event.locals.user?.passwordTemporary &&
+		path.startsWith('/api/') &&
+		!allowedWithTemporaryPassword(path)
+	) {
+		return json({ message: 'パスワードの変更が必要です。' }, { status: 403 });
 	}
 
 	return resolve(event);

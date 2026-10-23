@@ -95,10 +95,17 @@ export function resetUserPassword(
 ): AdminResult {
 	const target = db.select().from(users).where(eq(users.id, targetId)).get();
 	if (!target) return { ok: false, error: 'not_found' };
-	if (!canResetPassword(actor.role, target.role)) return { ok: false, error: 'forbidden' };
+	// 自分の認証情報はアカウント画面で変える(docs/adr/0007)。
+	if (actor.id === targetId || !canResetPassword(actor.role, target.role)) {
+		return { ok: false, error: 'forbidden' };
+	}
 
 	db.transaction((tx) => {
-		tx.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, targetId)).run();
+		// 管理者が知っているパスワードなので仮パスワードにする(本人が変えるまで他の操作は不可)。
+		tx.update(users)
+			.set({ passwordHash: newPasswordHash, passwordTemporary: true })
+			.where(eq(users.id, targetId))
+			.run();
 		tx.delete(passkeys).where(eq(passkeys.userId, targetId)).run();
 		tx.delete(sessions).where(eq(sessions.userId, targetId)).run();
 	});
@@ -115,6 +122,9 @@ export function setOwnPassword(
 	newPasswordHash: string,
 	keepSessionId: string
 ): void {
-	db.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, userId)).run();
+	db.update(users)
+		.set({ passwordHash: newPasswordHash, passwordTemporary: false })
+		.where(eq(users.id, userId))
+		.run();
 	deleteUserSessions(db, userId, keepSessionId);
 }

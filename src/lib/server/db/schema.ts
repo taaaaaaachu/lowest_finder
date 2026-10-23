@@ -12,6 +12,8 @@ export const users = sqliteTable('users', {
 	username: text('username').notNull().unique(),
 	/** null = パスワードなし(パスキーのみの会員)。 */
 	passwordHash: text('password_hash'),
+	/** 仮パスワード(管理者がリセットで設定し、本人がまだ変えていない)か。docs/adr/0007。 */
+	passwordTemporary: integer('password_temporary', { mode: 'boolean' }).notNull().default(false),
 	/** 役割。既定は user。最初に登録したユーザーは super_admin。 */
 	role: text('role').notNull().$type<Role>().default('user'),
 	createdAt: integer('created_at').notNull()

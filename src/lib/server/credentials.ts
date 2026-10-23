@@ -66,8 +66,15 @@ export function listPasskeyIds(db: Db, userId: string): { id: string; transports
 		.all();
 }
 
+/** パスキーを追加する。仮パスワードの会員なら仮パスワードを削除し、パスキーのみの会員にする。 */
 export function addPasskey(db: Db, row: Omit<PasskeyRow, 'lastUsedAt'>): void {
-	db.insert(passkeys).values(row).run();
+	db.transaction(() => {
+		db.insert(passkeys).values(row).run();
+		db.update(users)
+			.set({ passwordHash: null, passwordTemporary: false })
+			.where(and(eq(users.id, row.userId), eq(users.passwordTemporary, true)))
+			.run();
+	});
 }
 
 /** ログインに使われたパスキーのカウンタと最終使用日時を更新する。 */

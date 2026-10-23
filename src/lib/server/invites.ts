@@ -198,6 +198,7 @@ export function registerUser(
 				id: params.id ?? newId(),
 				username: params.username.trim(),
 				passwordHash: params.passwordHash,
+				passwordTemporary: false,
 				role: params.role,
 				createdAt: now
 			};

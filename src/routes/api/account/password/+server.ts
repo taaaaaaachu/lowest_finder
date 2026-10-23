@@ -16,6 +16,7 @@ import type { RequestHandler } from './$types';
  * 本人によるパスワードの変更・設定。操作端末以外のセッションを無効化する。
  * パスワードを持つ会員は常に現在のパスワードで本人確認する(直近の本人確認では代えない)。
  * パスワードのない会員(パスキーのみ)が新しく設定する場合だけ、直近の本人確認を求める。
+ * 仮パスワードからの変更も直近の本人確認で代え、仮パスワードと同じものは拒否する(docs/adr/0007)。
  */
 export const POST: RequestHandler = async ({ locals, request, cookies }) => {
 	const user = requireUser(locals);
@@ -26,7 +27,13 @@ export const POST: RequestHandler = async ({ locals, request, cookies }) => {
 	const pErr = validatePassword(newPassword);
 	if (pErr) throw error(400, pErr);
 
-	if (getCredentialSummary(db, user.id).hasPassword) {
+	if (user.passwordTemporary) {
+		// 仮パスワードはログインに使った直後なので、再入力させても防げるものがない。
+		requireRecentAuth(locals);
+		if (await verifyCredentials(user.username, newPassword)) {
+			throw error(400, '仮パスワードとは別のパスワードにしてください。');
+		}
+	} else if (getCredentialSummary(db, user.id).hasPassword) {
 		// 乗っ取られたセッションでの勝手な変更を防ぐ。
 		const verified = await verifyCredentials(user.username, currentPassword);
 		if (!verified) throw error(400, '現在のパスワードが違います。');

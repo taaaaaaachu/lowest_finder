@@ -4,7 +4,13 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			user: { id: string; username: string; role: import('$lib/server/db/schema').Role } | null;
+			user: {
+				id: string;
+				username: string;
+				role: import('$lib/server/db/schema').Role;
+				/** 仮パスワードでログイン中なら、変更を済ませるまで他の操作はできない。 */
+				passwordTemporary: boolean;
+			} | null;
 			/** 現在のセッション(id は Cookie トークンのハッシュ)。未ログインなら null。 */
 			session: { id: string; verifiedAt: number | null } | null;
 		}

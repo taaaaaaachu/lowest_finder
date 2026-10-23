@@ -46,10 +46,12 @@
 			</a>
 			{#if data.user}
 				<div class="account">
-					{#if canAccessAdmin(data.user.role)}
-						<a class="nav-link" href="/admin/users">管理</a>
+					{#if !data.user.passwordTemporary}
+						{#if canAccessAdmin(data.user.role)}
+							<a class="nav-link" href="/admin/users">管理</a>
+						{/if}
+						<a class="nav-link" href="/account">アカウント</a>
 					{/if}
-					<a class="nav-link" href="/account">アカウント</a>
 					<span class="mode member">@{data.user.username}</span>
 					<form
 						method="POST"

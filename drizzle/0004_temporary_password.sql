@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `password_temporary` integer DEFAULT false NOT NULL;

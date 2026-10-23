@@ -27,6 +27,20 @@ export function requireRecentAuth(locals: App.Locals): SessionUser & { sessionId
 	return { ...user, sessionId: locals.session.id };
 }
 
+/** 仮パスワードの会員でも使える API。パスワード変更・パスキー登録と、その前の本人確認だけ(docs/adr/0007)。 */
+const TEMPORARY_PASSWORD_APIS = new Set([
+	'/api/account/password',
+	'/api/account/reauth',
+	'/api/passkey/auth/options',
+	'/api/passkey/register/options',
+	'/api/passkey/register/verify'
+]);
+
+/** 仮パスワードの会員がこの API を呼べるか。 */
+export function allowedWithTemporaryPassword(pathname: string): boolean {
+	return TEMPORARY_PASSWORD_APIS.has(pathname);
+}
+
 /** 管理者以上(admin / super_admin)必須。満たさなければ 403。 */
 export function requireAdmin(locals: App.Locals): SessionUser {
 	const user = requireUser(locals);

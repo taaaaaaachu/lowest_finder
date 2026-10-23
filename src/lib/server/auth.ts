@@ -59,7 +59,7 @@ export async function verifyCredentials(
 }
 
 export interface SessionValidation {
-	user: Pick<UserRow, 'id' | 'username' | 'role'>;
+	user: Pick<UserRow, 'id' | 'username' | 'role' | 'passwordTemporary'>;
 	session: { id: string; verifiedAt: number | null };
 	/** Cookie の有効期限を更新すべき場合の新しい期限(延長時のみ)。 */
 	renewedExpiresAt: number | null;
@@ -86,7 +86,12 @@ export function validateSessionToken(token: string): SessionValidation | null {
 	}
 
 	const user = db
-		.select({ id: users.id, username: users.username, role: users.role })
+		.select({
+			id: users.id,
+			username: users.username,
+			role: users.role,
+			passwordTemporary: users.passwordTemporary
+		})
 		.from(users)
 		.where(eq(users.id, row.userId))
 		.get();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clientId, requireRecentAuth } from './apiGuard';
+import { allowedWithTemporaryPassword, clientId, requireRecentAuth } from './apiGuard';
 
 describe('clientId', () => {
 	it('未指定は undefined、UUID 等はそのまま返す', () => {
@@ -18,7 +18,7 @@ describe('clientId', () => {
 });
 
 describe('requireRecentAuth', () => {
-	const user = { id: 'u', username: 'u', role: 'user' as const };
+	const user = { id: 'u', username: 'u', role: 'user' as const, passwordTemporary: false };
 
 	it('直近に本人確認していれば、ユーザーとセッション id を返す', () => {
 		const locals = { user, session: { id: 's', verifiedAt: Date.now() } };
@@ -34,5 +34,22 @@ describe('requireRecentAuth', () => {
 		expect(() => requireRecentAuth({ user: null, session: null })).toThrow(
 			expect.objectContaining({ status: 401 })
 		);
+	});
+});
+
+describe('allowedWithTemporaryPassword', () => {
+	it('パスワード変更・パスキー登録と本人確認だけ許す', () => {
+		for (const p of [
+			'/api/account/password',
+			'/api/account/reauth',
+			'/api/passkey/auth/options',
+			'/api/passkey/register/options',
+			'/api/passkey/register/verify'
+		]) {
+			expect(allowedWithTemporaryPassword(p)).toBe(true);
+		}
+		for (const p of ['/api/groups', '/api/users', '/api/account/passkeys/x', '/api/scrape']) {
+			expect(allowedWithTemporaryPassword(p)).toBe(false);
+		}
 	});
 });

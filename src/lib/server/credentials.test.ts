@@ -116,3 +116,20 @@ describe('renamePasskey / recordPasskeyUse', () => {
 		expect(row?.lastUsedAt).toBeTypeOf('number');
 	});
 });
+
+describe('addPasskey(仮パスワードの会員)', () => {
+	it('仮パスワードを削除してパスキーのみの会員にする', () => {
+		addUser('u', 'temp');
+		db.update(users).set({ passwordTemporary: true }).where(eq(users.id, 'u')).run();
+		addPk('u', 'pk1');
+		const row = db.select().from(users).where(eq(users.id, 'u')).get();
+		expect(row?.passwordHash).toBeNull();
+		expect(row?.passwordTemporary).toBe(false);
+	});
+
+	it('通常のパスワードは残す', () => {
+		addUser('u', 'mine');
+		addPk('u', 'pk1');
+		expect(db.select().from(users).where(eq(users.id, 'u')).get()?.passwordHash).toBe('mine');
+	});
+});
