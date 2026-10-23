@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
 		listUsers,
@@ -46,6 +46,8 @@
 		try {
 			await setUserRole(u.id, newRole);
 			notice = `${u.username} を ${ROLE_LABEL[newRole]} にしました。`;
+			// 自分のロールを変えたらヘッダー等の表示も更新する。
+			if (u.id === me.id) await invalidate('app:user');
 			await reload();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'ロール変更に失敗しました。';

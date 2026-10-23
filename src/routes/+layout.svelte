@@ -3,12 +3,24 @@
 	import { onMount } from 'svelte';
 	import { version } from '$app/environment';
 	import { enhance } from '$app/forms';
+	import { invalidate } from '$app/navigation';
 	import { canAccessAdmin } from '$lib/rbac';
 	import { app } from '$lib/stores/app.svelte';
 
 	let { children, data } = $props();
 
 	onMount(() => {
+		// 別端末でロールが変わっても、タブに戻ったときヘッダーに反映する。
+		// オフライン時に読み直すとエラー画面になるため、オンラインのときだけ。
+		const refreshUser = () => {
+			if (document.visibilityState === 'visible' && navigator.onLine) invalidate('app:user');
+		};
+		document.addEventListener('visibilitychange', refreshUser);
+		registerServiceWorker();
+		return () => document.removeEventListener('visibilitychange', refreshUser);
+	});
+
+	function registerServiceWorker() {
 		if (!('serviceWorker' in navigator)) return;
 
 		// URLをビルドごとに変え、Cloudflareやブラウザに残った旧版の再登録を避ける。
@@ -18,7 +30,7 @@
 				updateViaCache: 'none'
 			})
 			.catch((error: unknown) => console.error('Service Workerの登録に失敗しました', error));
-	});
+	}
 </script>
 
 <svelte:head>
