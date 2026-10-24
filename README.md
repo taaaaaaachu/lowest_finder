@@ -77,7 +77,7 @@
 
 ## テスト
 
-`npm test`(Vitest)で **22 ファイル・198 件**のテストが通ることを確認している。主な対象は次のとおり。
+`pnpm test`(Vitest)で **22 ファイル・198 件**のテストが通ることを確認している。主な対象は次のとおり。
 
 - **ドメインロジック**: 単価計算とソート、計算式の評価、数値入力の正規化、表示フォーマット。
 - **認証・認可**: パスワードの検証とハッシュ、直近の本人確認の判定、認証情報の操作(最後の 1 つを消せないこと)、ロールごとの権限判定、管理操作(super_admin を 0 人にできないことなど)、招待コードの発行・無効化・登録。
@@ -87,27 +87,27 @@
 - **スクレイピング**: 各サイトのアダプタ、価格の解析、SSRF 判定。
 - **Service Worker と PWA**: リクエストごとのキャッシュ戦略の判定、manifest の内容。
 
-CI([.github/workflows/ci.yml](./.github/workflows/ci.yml))では、`main` への push とすべての PR で `npm run lint`(ESLint)、`npm run check`(svelte-check による型チェック)、`npm test` を実行する。
+CI([.github/workflows/ci.yml](./.github/workflows/ci.yml))では、`main` への push とすべての PR で `pnpm lint`(ESLint)、`pnpm check`(svelte-check による型チェック)、`pnpm test` を実行する。
 
 ## ローカルでの起動方法
 
 Node.js 22.17 以上を想定している(SvelteKit 3 の要件。CI と Docker イメージは Node.js 24 系(Active LTS)の最新)。
 
 ```bash
-npm ci
-npm run db:migrate   # ./data/app.sqlite にスキーマを適用(DATABASE_PATH で変更可)
-npm run dev          # http://localhost:5173
+pnpm install
+pnpm db:migrate   # ./data/app.sqlite にスキーマを適用(DATABASE_PATH で変更可)
+pnpm dev          # http://localhost:5173
 ```
 
 最初に登録した 1 人目は招待コードなしで登録でき、`super_admin` になる。2 人目からは、管理画面で招待コードを発行して登録する。
 
 | コマンド | 内容 |
 | --- | --- |
-| `npm test` | テストを実行 |
-| `npm run lint` / `npm run lint:fix` | ESLint による静的検査(`:fix` は自動修正) |
-| `npm run check` | 型チェック |
-| `npm run build` / `npm start` | 本番ビルドと起動 |
-| `npm run db:generate` | スキーマ変更後にマイグレーションを生成(続けて `npm run db:migrate`) |
+| `pnpm test` | テストを実行 |
+| `pnpm lint` / `pnpm lint:fix` | ESLint による静的検査(`:fix` は自動修正) |
+| `pnpm check` | 型チェック |
+| `pnpm build` / `pnpm start` | 本番ビルドと起動 |
+| `pnpm db:generate` | スキーマ変更後にマイグレーションを生成(続けて `pnpm db:migrate`) |
 
 ### Docker での動作確認
 

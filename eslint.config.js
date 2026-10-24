@@ -11,7 +11,7 @@ import globals from 'globals';
 export default ts.config(
 	{
 		// 生成物・外部ファイルは対象外。
-		ignores: ['.svelte-kit/', 'build/', 'node_modules/', 'drizzle/', 'static/', 'data/', 'package-lock.json']
+		ignores: ['.svelte-kit/', 'build/', 'node_modules/', 'drizzle/', 'static/', 'data/', 'pnpm-lock.yaml']
 	},
 	js.configs.recommended,
 	...ts.configs.recommended,
