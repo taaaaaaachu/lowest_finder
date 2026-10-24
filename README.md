@@ -29,7 +29,7 @@
 | 認証 | サーバーセッション(httpOnly Cookie)、パスワードは Argon2(`@node-rs/argon2`)、パスキーは SimpleWebAuthn 14 |
 | スクレイピング | Node.js の `fetch` + `node-html-parser` |
 | PWA | Web App Manifest + 自前の Service Worker |
-| インフラ | Docker(Node.js 22)、Cloudflare Tunnel による公開 |
+| インフラ | Docker(Node.js 24)、Cloudflare Tunnel による公開 |
 | CI/CD | GitHub Actions(lint・型チェック・テスト → GHCR へイメージ配布)、Watchtower によるプル型デプロイ |
 | テスト | Vitest 4、fake-indexeddb |
 
@@ -91,7 +91,7 @@ CI([.github/workflows/ci.yml](./.github/workflows/ci.yml))では、`main` への
 
 ## ローカルでの起動方法
 
-Node.js 22.17 以上を想定している(SvelteKit 3 の要件。CI と Docker イメージは Node.js 22 系の最新)。
+Node.js 22.17 以上を想定している(SvelteKit 3 の要件。CI と Docker イメージは Node.js 24 系(Active LTS)の最新)。
 
 ```bash
 npm ci
