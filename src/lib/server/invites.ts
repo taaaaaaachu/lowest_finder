@@ -228,3 +228,36 @@ export function registerUser(
 		return { ok: false, error: 'username_taken' };
 	}
 }
+
+export interface InvitePreview {
+	state: InviteState;
+	/** 発行者のユーザー名(削除済みなら null)。 */
+	issuer: string | null;
+	expiresAt: number | null;
+}
+
+/**
+ * 招待リンクの確認画面用に、コードを消費せず状態と発行者を返す。無いコードは null。
+ * コードは 72 ビットの乱数なので、照会に試行回数の制限は設けない。
+ */
+export function previewInvite(db: Db, code: string): InvitePreview | null {
+	const r = db
+		.select({
+			usedBy: invites.usedBy,
+			expiresAt: invites.expiresAt,
+			revokedAt: invites.revokedAt,
+			issuer: users.username
+		})
+		.from(invites)
+		.leftJoin(users, eq(invites.createdBy, users.id))
+		.where(eq(invites.code, code))
+		.get();
+	if (!r) return null;
+	return { state: inviteState(r), issuer: r.issuer, expiresAt: r.expiresAt };
+}
+
+/** 使えない招待なら理由の文言、使えるなら null。 */
+export function unusableInviteMessage(invite: InvitePreview | null): string | null {
+	if (!invite) return REGISTER_ERROR_MESSAGES.invite_invalid;
+	return invite.state === 'active' ? null : REGISTER_ERROR_MESSAGES[`invite_${invite.state}`];
+}
