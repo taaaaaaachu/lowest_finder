@@ -43,7 +43,13 @@
 	<form method="POST" use:enhance={submit} class="auth-form">
 		{#if form?.error}<p class="err">{form.error}</p>{/if}
 		{#if passkeyError}<p class="err">{passkeyError}</p>{/if}
-		{#if data.requireInvite}
+		{#if data.inviteLink?.unusable}<p class="err">{data.inviteLink.unusable}</p>{/if}
+		{#if data.requireInvite && data.inviteLink && !data.inviteLink.unusable}
+			<input type="hidden" name="invite" value={data.inviteLink.code} />
+			<p class="note">
+				{data.inviteLink.issuer ? `${data.inviteLink.issuer} さんからの` : ''}招待で登録します。
+			</p>
+		{:else if data.requireInvite}
 			<label class="field">
 				<span>招待コード</span>
 				<input name="invite" type="text" autocomplete="off" placeholder="既存ユーザーから受け取ったコード" required />

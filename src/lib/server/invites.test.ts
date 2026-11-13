@@ -11,7 +11,9 @@ import {
 	revokeInvite,
 	deleteInvite,
 	registerUser,
-	precheckRegistration
+	precheckRegistration,
+	previewInvite,
+	unusableInviteMessage
 } from './invites';
 
 let db: Db;
@@ -221,5 +223,35 @@ describe('precheckRegistration', () => {
 		expect(precheckRegistration(db, { username: 'owner', requireInvite: true, inviteCode: inv.code })).toBe('username_taken');
 		expect(precheckRegistration(db, { username: 'new', requireInvite: true, inviteCode: inv.code })).toBeNull();
 		expect(precheckRegistration(db, { username: 'new', requireInvite: false })).toBeNull();
+	});
+});
+
+describe('previewInvite', () => {
+	it('コードを消費せず、状態と発行者を返す', () => {
+		const owner = bootstrapUser();
+		const inv = createInvite(db, owner.id, null);
+		expect(previewInvite(db, inv.code)).toEqual({ state: 'active', issuer: 'owner', expiresAt: null });
+		expect(db.select().from(invites).where(eq(invites.code, inv.code)).get()?.usedBy).toBeNull();
+	});
+
+	it('使用済み・無効化を反映し、無いコードは null', () => {
+		const owner = bootstrapUser();
+		const used = createInvite(db, owner.id, null);
+		registerUser(db, { username: 'invitee', passwordHash: 'x', requireInvite: true, role: 'user', inviteCode: used.code });
+		const revoked = createInvite(db, owner.id, null);
+		revokeInvite(db, revoked.id);
+		const expired = createInvite(db, owner.id, Date.now() - 1);
+		expect(previewInvite(db, used.code)?.state).toBe('used');
+		expect(previewInvite(db, revoked.code)?.state).toBe('revoked');
+		expect(previewInvite(db, expired.code)?.state).toBe('expired');
+		expect(previewInvite(db, 'nope')).toBeNull();
+	});
+});
+
+describe('unusableInviteMessage', () => {
+	it('有効なら null、それ以外は理由を返す', () => {
+		expect(unusableInviteMessage({ state: 'active', issuer: null, expiresAt: null })).toBeNull();
+		expect(unusableInviteMessage({ state: 'expired', issuer: null, expiresAt: 0 })).toBe('この招待コードは有効期限が切れています。');
+		expect(unusableInviteMessage(null)).toBe('招待コードが正しくありません。');
 	});
 });

@@ -7,13 +7,25 @@ import {
 } from '#lib/server/auth.js';
 import { setSessionCookie } from '#lib/server/sessionCookie.js';
 import { db } from '#lib/server/db/index.js';
-import { countUsers, registerUser, REGISTER_ERROR_MESSAGES } from '#lib/server/invites.js';
+import {
+	countUsers,
+	previewInvite,
+	registerUser,
+	unusableInviteMessage,
+	REGISTER_ERROR_MESSAGES
+} from '#lib/server/invites.js';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) throw redirect(303, '/');
-	// ユーザーが 0 人のときだけ招待コードなしで登録できる(ブートストラップ)。
-	return { requireInvite: countUsers(db) > 0 };
+	// 招待リンク(/invite/<コード>)から来たときはコードが付く。使えるならコード欄を隠す。
+	const code = url.searchParams.get('invite');
+	const preview = code ? previewInvite(db, code) : null;
+	return {
+		// ユーザーが 0 人のときだけ招待コードなしで登録できる(ブートストラップ)。
+		requireInvite: countUsers(db) > 0,
+		inviteLink: code ? { code, issuer: preview?.issuer ?? null, unusable: unusableInviteMessage(preview) } : null
+	};
 };
 
 export const actions: Actions = {
