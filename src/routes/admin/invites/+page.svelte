@@ -8,6 +8,7 @@
 		type AdminInvite
 	} from '#lib/admin/client.js';
 	import { formatDateTime } from '#lib/format.js';
+	import InviteLinkShare from '#lib/components/InviteLinkShare.svelte';
 
 	let invites = $state<AdminInvite[]>([]);
 	let expiry = $state('168');
@@ -15,6 +16,8 @@
 	let error = $state<string | null>(null);
 	let lastCode = $state<string | null>(null);
 	let copied = $state(false);
+	/** 招待リンクを開いている行の id。 */
+	let linkOpenId = $state<string | null>(null);
 
 	const EXPIRY_OPTIONS = [
 		{ value: '1', label: '1時間' },
@@ -121,6 +124,7 @@
 				<code>{lastCode}</code>
 				<button type="button" onclick={() => copy(lastCode!)}>{copied ? 'コピー済' : 'コピー'}</button>
 			</div>
+			<div class="new-link"><InviteLinkShare code={lastCode} /></div>
 		{/if}
 	</section>
 
@@ -146,11 +150,17 @@
 								<td>{inv.invitee ?? '—'}</td>
 								<td class="ops">
 									{#if inv.state === 'active'}
+										<button type="button" onclick={() => (linkOpenId = linkOpenId === inv.id ? null : inv.id)}>
+											リンク
+										</button>
 										<button type="button" onclick={() => revoke(inv)}>無効化</button>
 									{/if}
 									<button type="button" class="danger" onclick={() => remove(inv)}>削除</button>
 								</td>
 							</tr>
+							{#if linkOpenId === inv.id && inv.state === 'active'}
+								<tr><td colspan="6"><InviteLinkShare code={inv.code} /></td></tr>
+							{/if}
 						{/each}
 					</tbody>
 				</table>
@@ -198,6 +208,9 @@
 		border: 1px solid var(--best);
 		border-radius: 8px;
 		flex-wrap: wrap;
+	}
+	.new-link {
+		margin-top: 0.6rem;
 	}
 	code {
 		font-family: ui-monospace, monospace;
